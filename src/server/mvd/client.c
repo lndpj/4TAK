@@ -1896,12 +1896,12 @@ static void emit_gamestate(mvd_t *mvd)
     // send the serverdata
     if (mvd->version >= PROTOCOL_VERSION_MVD_EXTENDED_LIMITS_2) {
         MSG_WriteByte(mvd_serverdata);
-        MSG_WriteLong(PROTOCOL_VERSION_MVD);
+        MSG_WriteLong(PROTOCOL_VERSION_4MVD);
         MSG_WriteLong(mvd->version);
         MSG_WriteShort(mvd->flags);
     } else {
         MSG_WriteByte(mvd_serverdata | (mvd->flags << SVCMD_BITS));
-        MSG_WriteLong(PROTOCOL_VERSION_MVD);
+        MSG_WriteLong(PROTOCOL_VERSION_4MVD);
         MSG_WriteLong(mvd->version);
     }
     MSG_WriteLong(mvd->servercount);

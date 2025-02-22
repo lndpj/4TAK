@@ -1128,14 +1128,14 @@ void SV_InitGameProgs(void)
             Com_Error(ERR_DROP, "...but expected %d\n", GAME_API_VERSION);
         }
     } else {
-        svs.game_api = Q2PROTO_GAME_RERELEASE;
+        svs.game_api = Q2PROTO_GAME_4TAK;
         Cvar_SetInteger(g_features, GMF_PROTOCOL_EXTENSIONS | GMF_ENHANCED_SAVEGAMES | GMF_PROPERINUSE | GMF_WANT_ALL_DISCONNECTS, FROM_CODE);
     }
 
     // initialize
     /* Note: Those functions may already call configstring(). They also decide the features...
      * So start with an extended csr, and possible choose a smaller one later. */
-    if (svs.game_api == Q2PROTO_GAME_RERELEASE)
+    if (svs.game_api == Q2PROTO_GAME_4TAK)
         svs.csr = cs_remap_rerelease;
     else
         svs.csr = cs_remap_q2pro_new;

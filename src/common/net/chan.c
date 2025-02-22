@@ -214,9 +214,7 @@ static int NetchanOld_Transmit(netchan_t *chan, size_t length, const void *data,
 #if USE_CLIENT
     // send the qport if we are a client
     if (chan->sock == NS_CLIENT) {
-        if (chan->protocol < PROTOCOL_VERSION_R1Q2) {
-            SZ_WriteShort(&send, chan->qport);
-        } else if (chan->qport) {
+        if (chan->qport) {  //qb: protocol cleanup
             SZ_WriteByte(&send, chan->qport);
         }
     }
@@ -276,9 +274,7 @@ static bool NetchanOld_Process(netchan_t *chan)
 
     // read the qport if we are a server
     if (chan->sock == NS_SERVER) {
-        if (chan->protocol < PROTOCOL_VERSION_R1Q2) {
-            MSG_ReadShort();
-        } else if (chan->qport) {
+        if (chan->qport) { //qb: protocol cleanup
             MSG_ReadByte();
         }
     }

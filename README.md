@@ -1,3 +1,15 @@
+
+4TAK Experiment
+
+The goal of 4TAK is to improve network protocol, add extended map size limits, and add mods like pushing barrels off ledges.
+
+The vision is to enhance engine and game code for a four-player (more or less) tactical coop experience.
+
+Change to network data sequence is expected to reduce large packet size 10% to 20%.  This is valuable for coop games with lots of monsters.  However, an elegant way to implement reverse-compatibility with other protocols has not been found, hence a separate engine.
+
+4TAK is forked from:
+
+=====
 Q2REPRO
 =====
 

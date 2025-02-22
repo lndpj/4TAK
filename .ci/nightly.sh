@@ -58,7 +58,7 @@ cd $TMP_DIR
 meson setup --cross-file $CI/i686-w64-mingw32.txt $MESON_OPTS build-mingw-32 $SRC
 cd build-mingw-32
 ninja
-i686-w64-mingw32-strip q2pro.exe q2proded.exe gamex86.dll
+i686-w64-mingw32-strip 4TAK.exe 4TAKded.exe gamex86.dll
 
 unix2dos -k -n ../$SRC/LICENSE LICENSE.txt ../$SRC/doc/client.asciidoc MANUAL.txt ../README README.txt
 mkdir baseq2
@@ -66,7 +66,7 @@ cp -a ../$SRC/src/client/ui/q2pro.menu baseq2/
 mv gamex86.dll baseq2/
 
 zip -9 ../q2pro-client_win32_x86.zip \
-    q2pro.exe \
+    4TAK.exe \
     LICENSE.txt \
     MANUAL.txt \
     README.txt \
@@ -75,7 +75,7 @@ zip -9 ../q2pro-client_win32_x86.zip \
 
 unix2dos -k -n ../$SRC/doc/server.asciidoc MANUAL.txt
 zip -9 ../q2pro-server_win32_x86.zip \
-    q2proded.exe \
+    4TAKded.exe \
     LICENSE.txt \
     MANUAL.txt \
     README.txt
@@ -89,14 +89,14 @@ cd $TMP_DIR
 meson setup --cross-file $CI/x86_64-w64-mingw32.txt $MESON_OPTS build-mingw-64 $SRC
 cd build-mingw-64
 ninja
-x86_64-w64-mingw32-strip q2pro.exe q2proded.exe gamex86_64.dll
+x86_64-w64-mingw32-strip 4TAK.exe 4TAKded.exe gamex86_64.dll
 
 unix2dos -k -n ../$SRC/LICENSE LICENSE.txt ../$SRC/doc/client.asciidoc MANUAL.txt ../README README.txt
 mkdir baseq2
 cp -a ../$SRC/src/client/ui/q2pro.menu baseq2/
 mv gamex86_64.dll baseq2/
-mv q2pro.exe q2pro64.exe
-mv q2proded.exe q2proded64.exe
+mv 4TAK.exe q2pro64.exe
+mv 4TAKded.exe q2proded64.exe
 
 zip -9 ../q2pro-client_win64_x64.zip \
     q2pro64.exe \
@@ -126,13 +126,13 @@ zip -9 ../build-mingw/q2pro.pkz default.cfg q2pro.menu
 
 cd $TMP_DIR/build-mingw-64
 
-mv q2pro64.exe q2pro.exe
+mv q2pro64.exe 4TAK.exe
 cp -a ../q2pro-rerelease-dll/build-mingw/q2pro.pkz baseq2/
 cp -a ../q2pro-rerelease-dll/build-mingw/gamex86_64.dll baseq2/
 unix2dos -k -n ../$SRC/doc/client.asciidoc MANUAL.txt ../README.rr README.txt
 
-zip -9 ../q2pro-rerelease-client_win64_x64.zip \
-    q2pro.exe \
+zip -9 ../4TAK-client_win64_x64.zip \
+    4TAK.exe \
     LICENSE.txt \
     MANUAL.txt \
     README.txt \

@@ -4,9 +4,9 @@ Version ##VER## has been automatically built ##DATE##
 from git master branch.
 
 Installation: extract this archive into new directory, then create shortcut to
-q2pro.exe with the following command line:
+4TAK.exe with the following command line:
 
-    q2pro.exe +set basedir "<path to re-release dir>" +set homedir "."
+    4TAK.exe +set basedir "<path to re-release dir>" +set homedir "."
 
 For information on using and configuring Q2PRO, refer to MANUAL file.
 

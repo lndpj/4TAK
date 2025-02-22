@@ -371,7 +371,7 @@ static void MVD_ParseUnicast(mvd_t *mvd, bool reliable, int extrabits)
     while (msg_read.readcount < last) {
         cmd = MSG_ReadByte();
 
-        SHOWNET(2, "%3u:%s\n", msg_read.readcount - 1, MSG_ServerCommandString(cmd, PROTOCOL_VERSION_MVD));
+        SHOWNET(2, "%3u:%s\n", msg_read.readcount - 1, MSG_ServerCommandString(cmd, PROTOCOL_VERSION_4MVD));
 
         switch (cmd) {
         case svc_layout:
@@ -884,7 +884,7 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
 
     // parse major protocol version
     protocol = MSG_ReadLong();
-    if (protocol != PROTOCOL_VERSION_MVD) {
+    if (protocol != PROTOCOL_VERSION_4MVD) {
         MVD_Destroyf(mvd, "Unsupported protocol: %d", protocol);
     }
 
@@ -933,7 +933,7 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
     /* HACKY: is_game_rerelease must match the value that was used on the server
      * so matching CS limits are used */
     if (mvd->version == PROTOCOL_VERSION_MVD_RERELEASE)
-        svs.game_api = Q2PROTO_GAME_RERELEASE;
+        svs.game_api = Q2PROTO_GAME_4TAK;
     else if (mvd->version >= PROTOCOL_VERSION_MVD_EXTENDED_LIMITS_2 && mvd->flags & MVF_EXTLIMITS_2) {
         svs.game_api = Q2PROTO_GAME_Q2PRO_EXTENDED_V2;
     } else if (mvd->version >= PROTOCOL_VERSION_MVD_EXTENDED_LIMITS && mvd->flags & MVF_EXTLIMITS) {

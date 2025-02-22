@@ -1377,7 +1377,7 @@ static void set_client_fps(int value)
     // save for status inspection
     sv_client->settings[CLS_FPS] = framerate;
 
-    MSG_WriteByte(sv_client->protocol == PROTOCOL_VERSION_RERELEASE ? svc_rr_setting : svc_q2pro_setting);
+    MSG_WriteByte(sv_client->protocol == PROTOCOL_VERSION_4TAK ? svc_rr_setting : svc_q2pro_setting);
     MSG_WriteLong(SVS_FPS);
     MSG_WriteLong(framerate);
     SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
@@ -1399,7 +1399,7 @@ static void SV_ParseClientSetting(const q2proto_clc_setting_t *setting)
     sv_client->settings[idx] = value;
 
 #if USE_FPS
-    if (idx == CLS_FPS && sv_client->protocol == PROTOCOL_VERSION_Q2PRO)
+    if (idx == CLS_FPS && sv_client->protocol == PROTOCOL_VERSION_4TAK)
         set_client_fps(value);
 #endif
 }

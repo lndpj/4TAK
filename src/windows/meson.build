@@ -11,13 +11,19 @@ rc_inc = meson.project_build_root()
 
 client_src += windows.compile_resources('res/q2pro.rc',
   args:                rc_args,
-  depend_files:        ['res/q2pro.ico', 'res/q2pro.exe.manifest'],
+  depend_files:        ['res/q2pro.ico', 'res/4TAK.exe.manifest'],
+  depend_files:        ['res/q2pro.ico', 'res/4TAK.exe.manifest'],
   include_directories: rc_inc,
 )
 
 server_src += windows.compile_resources('res/q2proded.rc',
   args:                rc_args,
   depend_files:        ['res/q2proded.ico', 'res/4TAKded.exe.manifest'],
+  include_directories: rc_inc,
+)
+
+game_src += windows.compile_resources('res/game.rc',
+  args:                rc_args,
   include_directories: rc_inc,
 )
 

@@ -134,7 +134,7 @@ void SV_SpawnServer(const mapcmd_t *cmd)
     }
 
     // set framerate parameters
-    if (svs.game_api == Q2PROTO_GAME_RERELEASE) {
+    if (svs.game_api == Q2PROTO_GAME_4TAK) {
         // configured tick rate
         set_frame_time(sv_fps->integer, false);
     } else {
@@ -218,7 +218,7 @@ void SV_SpawnServer(const mapcmd_t *cmd)
     // set serverinfo variable
     SV_InfoSet("mapname", sv.name);
     SV_InfoSet("port", net_port->string);
-    SV_InfoSet("protocol", STRINGIFY(PROTOCOL_VERSION_RERELEASE));
+    SV_InfoSet("protocol", STRINGIFY(PROTOCOL_VERSION_4TAK));
 
     Cvar_Set("sv_paused", "0");
     Cvar_Set("timedemo", "0");

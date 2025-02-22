@@ -1395,8 +1395,7 @@ bool CL_GetDemoInfo(const char *path, demoInfo_t *info)
         case Q2PROTO_GAME_Q2PRO_EXTENDED_V2:
             csr = &cs_remap_q2pro_new;
             break;
-            case Q2PROTO_GAME_RERELEASE:
-            case Q2PROTO_GAME_4TAK:
+        case Q2PROTO_GAME_4TAK:
             csr = &cs_remap_rerelease;
             break;
         }
@@ -1424,7 +1423,7 @@ bool CL_GetDemoInfo(const char *path, demoInfo_t *info)
             goto fail;
         }
         int mvd_protocol = MSG_ReadLong();
-        if (mvd_protocol != PROTOCOL_VERSION_MVD) {
+        if (mvd_protocol != PROTOCOL_VERSION_4MVD) {
             goto fail;
         }
         int protocol_version = MSG_ReadWord();

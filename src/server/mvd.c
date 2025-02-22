@@ -620,21 +620,21 @@ static void emit_gamestate(void)
         flags |= MVF_NOMSGS;
 
     // send the serverdata
-    if (svs.game_api == Q2PROTO_GAME_RERELEASE) {
+    if (svs.game_api == Q2PROTO_GAME_4TAK) {
         MSG_WriteByte(mvd_serverdata | (flags << SVCMD_BITS));
-        MSG_WriteLong(PROTOCOL_VERSION_MVD);
+        MSG_WriteLong(PROTOCOL_VERSION_4MVD);
         MSG_WriteShort(PROTOCOL_VERSION_MVD_RERELEASE);
     } else if (svs.game_api == Q2PROTO_GAME_Q2PRO_EXTENDED || svs.game_api == Q2PROTO_GAME_Q2PRO_EXTENDED_V2) {
         flags |= MVF_EXTLIMITS;
         if (svs.game_api == Q2PROTO_GAME_Q2PRO_EXTENDED_V2)
             flags |= MVF_EXTLIMITS_2;
         MSG_WriteByte(mvd_serverdata);
-        MSG_WriteLong(PROTOCOL_VERSION_MVD);
+        MSG_WriteLong(PROTOCOL_VERSION_4MVD);
         MSG_WriteShort(PROTOCOL_VERSION_MVD_CURRENT);
         MSG_WriteShort(flags);
     } else {
         MSG_WriteByte(mvd_serverdata | (flags << SVCMD_BITS));
-        MSG_WriteLong(PROTOCOL_VERSION_MVD);
+        MSG_WriteLong(PROTOCOL_VERSION_4MVD);
         MSG_WriteShort(PROTOCOL_VERSION_MVD_DEFAULT);
     }
     MSG_WriteLong(sv.spawncount);
@@ -2148,7 +2148,7 @@ void SV_MvdPostInit(void)
             mvd.psFlags |= MSG_PS_EXTENSIONS_2 | MSG_PS_MOREBITS;
         }
     }
-    if (svs.game_api == Q2PROTO_GAME_RERELEASE) {
+    if (svs.game_api == Q2PROTO_GAME_4TAK) {
         mvd.esFlags |= MSG_ES_LONGSOLID | MSG_ES_SHORTANGLES | MSG_ES_EXTENSIONS | MSG_ES_RERELEASE;
         mvd.psFlags |= MSG_PS_EXTENSIONS | MSG_PS_RERELEASE;
     }

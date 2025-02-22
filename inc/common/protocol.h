@@ -24,14 +24,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define MAX_MSGLEN  0x8000      // max length of a message, 32 KiB
 
-#define PROTOCOL_VERSION_OLD            26
-#define PROTOCOL_VERSION_DEFAULT        34
-#define PROTOCOL_VERSION_R1Q2           35
-#define PROTOCOL_VERSION_Q2PRO          36
-#define PROTOCOL_VERSION_MVD            37      // not used for UDP connections
-#define PROTOCOL_VERSION_RERELEASE      1038
-#define PROTOCOL_VERSION_KEX_DEMOS      2022
-#define PROTOCOL_VERSION_KEX            2023
+#define PROTOCOL_VERSION_DEFAULT        1440  //qb: not compatible with other versions
+#define PROTOCOL_VERSION_4MVD            44      // not used for UDP connections
+#define PROTOCOL_VERSION_4TAK           1440    //qb: rewrite bit sequence, extended map size limits
 
 #define PROTOCOL_VERSION_EXTENDED_MINIMUM       3434    // r2894
 #define PROTOCOL_VERSION_EXTENDED_LIMITS_2      3435    // r3300
@@ -77,10 +72,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
     (((x) >= PROTOCOL_VERSION_MVD_MINIMUM && \
       (x) <= PROTOCOL_VERSION_MVD_CURRENT) \
      || ((x) == PROTOCOL_VERSION_MVD_RERELEASE))
-
-#define EXTENDED_SUPPORTED(x) \
-    ((x) >= PROTOCOL_VERSION_EXTENDED_MINIMUM && \
-     (x) <= PROTOCOL_VERSION_EXTENDED_CURRENT)
 
 #define VALIDATE_CLIENTNUM(csr, x) \
     ((x) >= -1 && (x) < (csr)->max_edicts - 1)

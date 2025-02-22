@@ -72,21 +72,21 @@ static void emit_gamestate(void)
     if (cl.csr.extended) {
         flags |= MVF_EXTLIMITS;
     MSG_WriteByte(mvd_serverdata | (flags << SVCMD_BITS));
-    MSG_WriteLong(PROTOCOL_VERSION_MVD);
+    MSG_WriteLong(PROTOCOL_VERSION_4MVD);
     if (cl.is_rerelease_game) {
         MSG_WriteByte(mvd_serverdata | (flags << SVCMD_BITS));
-        MSG_WriteLong(PROTOCOL_VERSION_MVD);
+        MSG_WriteLong(PROTOCOL_VERSION_4MVD);
         MSG_WriteShort(PROTOCOL_VERSION_MVD_RERELEASE);
     } else if (cl.csr.extended) {
         if (cl.esFlags & MSG_ES_EXTENSIONS_2)
             flags |= MVF_EXTLIMITS_2;
         MSG_WriteByte(mvd_serverdata);
-        MSG_WriteLong(PROTOCOL_VERSION_MVD);
+        MSG_WriteLong(PROTOCOL_VERSION_4MVD);
         MSG_WriteShort(PROTOCOL_VERSION_MVD_CURRENT);
         MSG_WriteShort(flags);
     } else {
         MSG_WriteByte(mvd_serverdata | (flags << SVCMD_BITS));
-        MSG_WriteLong(PROTOCOL_VERSION_MVD);
+        MSG_WriteLong(PROTOCOL_VERSION_4MVD);
         MSG_WriteShort(PROTOCOL_VERSION_MVD_DEFAULT);
     }
     MSG_WriteLong(cl.servercount);

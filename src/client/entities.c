@@ -35,7 +35,7 @@ FRAME PARSING
 // returns true if origin/angles update has been optimized out
 static inline bool entity_is_optimized(const entity_state_t *state)
 {
-    return (cls.serverProtocol == PROTOCOL_VERSION_Q2PRO || cls.serverProtocol == PROTOCOL_VERSION_RERELEASE)
+    return (cls.serverProtocol == PROTOCOL_VERSION_4TAK)
         && state->number == cl.frame.clientNum + 1
         && cl.frame.ps.pmove.pm_type < PM_DEAD;
 }
@@ -306,8 +306,7 @@ static void set_active_state(void)
         // set initial cl.predicted_origin and cl.predicted_angles
         VectorCopy(cl.frame.ps.pmove.origin, cl.predicted_origin);
         VectorCopy(cl.frame.ps.pmove.velocity, cl.predicted_velocity);
-        if (cl.frame.ps.pmove.pm_type < PM_DEAD &&
-            cls.serverProtocol > PROTOCOL_VERSION_DEFAULT) {
+        if (cl.frame.ps.pmove.pm_type < PM_DEAD) {
             // enhanced servers don't send viewangles
             CL_PredictAngles();
         } else {
@@ -993,7 +992,7 @@ static void CL_AddPacketEntities(void)
         if (s1->modelindex2) {
             if (s1->modelindex2 == MODELINDEX_PLAYER) {
                 // custom weapon
-                if (cl.game_api == Q2PROTO_GAME_RERELEASE) {
+                if (cl.game_api == Q2PROTO_GAME_4TAK) {
                     player_skinnum_t unpacked = { .skinnum = s1->skinnum };
                     ci = &cl.clientinfo[unpacked.client_num];
                     i = unpacked.vwep_index;
@@ -1270,7 +1269,7 @@ static void CL_AddViewWeapon(void)
         gun.oldframe = gun_frame;   // development tool
     } else {
 // KEX
-        if (cl.game_api == Q2PROTO_GAME_RERELEASE) {
+        if (cl.game_api == Q2PROTO_GAME_4TAK) {
             if (ops->gunindex != ps->gunindex) { // just changed weapons, don't lerp from old
                 cl.weapon.frame = cl.weapon.last_frame = ps->gunframe;
                 cl.weapon.server_time = cl.servertime;
@@ -1544,7 +1543,7 @@ void CL_CalcViewValues(void)
     } else if (ps->pmove.pm_type < PM_DEAD) {
         // use predicted values
         VectorCopy(cl.predicted_angles, cl.refdef.viewangles);
-    } else if (ops->pmove.pm_type < PM_DEAD && cls.serverProtocol > PROTOCOL_VERSION_DEFAULT) {
+    } else if (ops->pmove.pm_type < PM_DEAD) {
         // lerp from predicted angles, since enhanced servers
         // do not send viewangles each frame
         LerpAngles(cl.predicted_angles, ps->viewangles, lerp, cl.refdef.viewangles);
@@ -1552,7 +1551,6 @@ void CL_CalcViewValues(void)
         // just use interpolated values
         LerpAngles(ops->viewangles, ps->viewangles, lerp, cl.refdef.viewangles);
     }
-
     if (cl.csr.extended) {
         // interpolate blend colors if the last frame wasn't clear
         float blendfrac = ops->screen_blend[3] ? cl.lerpfrac : 1;

@@ -338,10 +338,6 @@ static void V_TestLights(void)
 
 void CL_UpdateBlendSetting(void)
 {
-    if (cls.netchan.protocol < PROTOCOL_VERSION_R1Q2) {
-        return;
-    }
-
     q2proto_clc_message_t message = {.type = Q2P_CLC_SETTING, .setting = {0}};
     message.setting.index = CLS_NOBLEND;
     message.setting.value = !cl_add_blend->integer;

@@ -27,6 +27,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 //
 
 #define GAME_API_VERSION    2023
+#define MAX_NETNAME         32
 
 #endif // !defined(GAME3_INCLUDE)
 

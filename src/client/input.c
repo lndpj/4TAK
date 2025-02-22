@@ -437,7 +437,7 @@ static void IN_Wheel2Up(void) { CL_Wheel_Close(true); }
 
 static void IN_WeapNext(void)
 {
-    if (cl.game_api != Q2PROTO_GAME_RERELEASE) {
+    if (cl.game_api != Q2PROTO_GAME_4TAK) {
         Cbuf_AddText(&cmd_buffer, "weapnext\n");
         return;
     }
@@ -447,7 +447,7 @@ static void IN_WeapNext(void)
 
 static void IN_WeapPrev(void)
 {
-    if (cl.game_api != Q2PROTO_GAME_RERELEASE) {
+    if (cl.game_api != Q2PROTO_GAME_4TAK) {
         Cbuf_AddText(&cmd_buffer, "weapprev\n");
         return;
     }
@@ -984,11 +984,6 @@ static void build_delta_move(q2proto_clc_move_delta_t* delta_move, const usercmd
     if (cmd->sidemove != from->sidemove) {
         q2proto_var_coords_set_float_comp(&delta_move->move, 1, cmd->sidemove);
         delta_move->delta_bits |= Q2P_CMD_MOVE_SIDE;
-    }
-    // The next one can only happen when is_rerelease == false
-    if (new_upmove != from_upmove) {
-        q2proto_var_coords_set_float_comp(&delta_move->move, 2, new_upmove);
-        delta_move->delta_bits |= Q2P_CMD_MOVE_UP;
     }
     if (new_buttons != from_buttons) {
         delta_move->buttons = new_buttons;

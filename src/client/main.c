@@ -189,10 +189,6 @@ static void CL_UpdateGunSetting(void)
 {
     int nogun;
 
-    if (cls.netchan.protocol < PROTOCOL_VERSION_R1Q2) {
-        return;
-    }
-
     if (cl_gun->integer == -1) {
         nogun = 2;
     } else if (cl_gun->integer == 0 || (info_hand->integer == 2 && cl_gun->integer == 1)) {
@@ -210,7 +206,7 @@ static void CL_UpdateGunSetting(void)
 
 static void CL_UpdateGibSetting(void)
 {
-    if (cls.netchan.protocol != PROTOCOL_VERSION_Q2PRO && cls.serverProtocol != PROTOCOL_VERSION_RERELEASE) {
+    if (cls.serverProtocol != PROTOCOL_VERSION_4TAK) {
         return;
     }
 
@@ -223,7 +219,7 @@ static void CL_UpdateGibSetting(void)
 
 static void CL_UpdateFootstepsSetting(void)
 {
-    if (cls.netchan.protocol != PROTOCOL_VERSION_Q2PRO && cls.serverProtocol != PROTOCOL_VERSION_RERELEASE) {
+    if (cls.serverProtocol != PROTOCOL_VERSION_4TAK) {
         return;
     }
 
@@ -236,7 +232,7 @@ static void CL_UpdateFootstepsSetting(void)
 
 static void CL_UpdatePredictSetting(void)
 {
-    if (cls.netchan.protocol != PROTOCOL_VERSION_Q2PRO && cls.serverProtocol != PROTOCOL_VERSION_RERELEASE) {
+    if (cls.serverProtocol != PROTOCOL_VERSION_4TAK) {
         return;
     }
 
@@ -251,7 +247,7 @@ static void CL_UpdatePredictSetting(void)
 static void CL_UpdateRateSetting(void)
 {
     // Rerelease protocol sends framerate in server data
-    if (cls.netchan.protocol != PROTOCOL_VERSION_Q2PRO) {
+    if (cls.netchan.protocol != PROTOCOL_VERSION_4TAK) {
         return;
     }
 
@@ -266,10 +262,6 @@ static void CL_UpdateRateSetting(void)
 void CL_UpdateRecordingSetting(void)
 {
     int rec;
-
-    if (cls.netchan.protocol < PROTOCOL_VERSION_R1Q2) {
-        return;
-    }
 
     if (cls.demo.recording) {
         rec = 1;
@@ -292,7 +284,7 @@ void CL_UpdateRecordingSetting(void)
 
 static void CL_UpdateFlaresSetting(void)
 {
-    if (cls.netchan.protocol != PROTOCOL_VERSION_Q2PRO && cls.serverProtocol != PROTOCOL_VERSION_RERELEASE) {
+    if (cls.serverProtocol != PROTOCOL_VERSION_4TAK) {
         return;
     }
     if (!cl.csr.extended) {
@@ -415,8 +407,8 @@ void CL_CheckForResend(void)
         strcpy(cls.servername, "localhost");
         cls.serverAddress.type = NA_LOOPBACK;
         cls.serverProtocol = cl_protocol->integer;
-        if (cls.serverProtocol != PROTOCOL_VERSION_RERELEASE) {
-            cls.serverProtocol = PROTOCOL_VERSION_RERELEASE;
+        if (cls.serverProtocol != PROTOCOL_VERSION_4TAK) {
+            cls.serverProtocol = PROTOCOL_VERSION_4TAK;
         }
 
         // we don't need a challenge on the localhost
@@ -1292,7 +1284,7 @@ static void CL_ConnectionlessPacket(void)
             accepted_protocols[0] = user_protocol;
             num_accepted_protocols = 1;
         } else {
-            const q2proto_game_api_t supported_game_apis[] = {Q2PROTO_GAME_VANILLA, Q2PROTO_GAME_Q2PRO_EXTENDED, Q2PROTO_GAME_Q2PRO_EXTENDED_V2, Q2PROTO_GAME_RERELEASE};
+            const q2proto_game_api_t supported_game_apis[] = {Q2PROTO_GAME_VANILLA, Q2PROTO_GAME_Q2PRO_EXTENDED, Q2PROTO_GAME_Q2PRO_EXTENDED_V2, Q2PROTO_GAME_4TAK};
             num_accepted_protocols = q2proto_get_protocols_for_gametypes(accepted_protocols, q_countof(accepted_protocols), supported_game_apis, q_countof(supported_game_apis));
         }
 
@@ -1333,8 +1325,7 @@ static void CL_ConnectionlessPacket(void)
             return;
         }
 
-        if ((cls.serverProtocol == PROTOCOL_VERSION_Q2PRO)
-            || (cls.serverProtocol == PROTOCOL_VERSION_RERELEASE)){
+        if (cls.serverProtocol == PROTOCOL_VERSION_4TAK){
             type = NETCHAN_NEW;
         } else {
             type = NETCHAN_OLD;
@@ -1588,12 +1579,7 @@ void CL_UpdateUserinfo(cvar_t *var, from_t from)
         return;
     }
 
-    if (cls.serverProtocol != PROTOCOL_VERSION_Q2PRO) {
-        // transmit at next opportunity
-        cls.userinfo_modified = MAX_PACKET_USERINFOS;
-        goto done;
-    }
-
+   
     if (cls.userinfo_modified == MAX_PACKET_USERINFOS) {
         // can't hold any more
         goto done;
@@ -3257,7 +3243,7 @@ void CL_AddHitMarker(void)
 
 static void CL_UpdateHitMarkers(void)
 {
-    if (cl.game_api != Q2PROTO_GAME_RERELEASE || !cl_hit_markers->integer)
+    if (cl.game_api != Q2PROTO_GAME_4TAK || !cl_hit_markers->integer)
         return;
 
     if (cgame->GetHitMarkerDamage(&cl.frame.ps))

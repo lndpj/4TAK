@@ -608,7 +608,7 @@ void SV_BuildClientFrame(client_t *client)
     // find the client's PVS
     SV_GetClient_ViewOrg(client, org);
     // Rerelease game doesn't include viewheight in viewoffset, vanilla does
-    if (svs.game_api == Q2PROTO_GAME_RERELEASE)
+    if (svs.game_api == Q2PROTO_GAME_4TAK)
         org[2] += clent->client->ps.pmove.viewheight;
 
     leaf = CM_PointLeaf(client->cm, org);

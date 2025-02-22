@@ -17,7 +17,7 @@
 #define VER_ORIGINALFILENAME_STR    "q2pro64.exe"
 #else
 #define VER_FILEDESCRIPTION_STR     "Q2PRO client"
-#define VER_ORIGINALFILENAME_STR    "q2pro.exe"
+#define VER_ORIGINALFILENAME_STR    "4TAK.exe"
 #endif
 
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
@@ -35,14 +35,14 @@ BEGIN
     BEGIN
         BLOCK "040904B0"
         BEGIN
-            VALUE "Comments", "https://github.com/skullernet/q2pro"
-            VALUE "CompanyName", "skuller.net"
+            VALUE "Comments", "https://github.com/qbism/4TAK"
+            VALUE "CompanyName", "4TAK.com"
             VALUE "FileDescription", VER_FILEDESCRIPTION_STR
             VALUE "OriginalFilename", VER_ORIGINALFILENAME_STR
             VALUE "FileVersion", VERSION
-            VALUE "InternalName", "q2pro"
-            VALUE "LegalCopyright", "Copyright © 2023 skuller.net"
-            VALUE "ProductName", "Q2PRO"
+            VALUE "InternalName", "4TAK"
+            VALUE "LegalCopyright", "GNU General Public License V2"
+            VALUE "ProductName", "4TAK"
             VALUE "ProductVersion", VERSION
         END
     END
@@ -55,4 +55,4 @@ END
 LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT
 
 100 ICON "q2pro.ico"
-CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "q2pro.exe.manifest"
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "4TAK.exe.manifest"

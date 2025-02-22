@@ -174,7 +174,7 @@ void CL_LoadClientinfo(clientinfo_t *ci, const char *s)
     char        weapon_filename[MAX_QPATH];
     char        icon_filename[MAX_QPATH];
     char        dogtag_filename[MAX_QPATH];
-    bool        parse_dogtag = cls.serverProtocol == PROTOCOL_VERSION_RERELEASE;
+    bool        parse_dogtag = cls.serverProtocol == PROTOCOL_VERSION_4TAK;
 
     CL_ParsePlayerSkin(ci->name, model_name, skin_name, dogtag_name, parse_dogtag, s);
 

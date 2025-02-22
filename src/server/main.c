@@ -116,7 +116,7 @@ cvar_t  *g_features;
 
 static bool     sv_registered;
 
-static const q2proto_protocol_t q2repro_accepted_protocols[] = {Q2P_PROTOCOL_Q2REPRO};
+static const q2proto_protocol_t q2repro_accepted_protocols[] = {Q2P_PROTOCOL_4TAK};
 
 //============================================================================
 
@@ -548,7 +548,7 @@ static void SVC_Info(void)
         return; // ignore in single player
 
     version = Q_atoi(Cmd_Argv(1));
-    if (version < PROTOCOL_VERSION_DEFAULT || version > PROTOCOL_VERSION_Q2PRO)
+    if (version != PROTOCOL_VERSION_4TAK)
         return; // ignore invalid versions
 
     len = Q_scnprintf(buffer, sizeof(buffer),
@@ -662,8 +662,8 @@ static bool parse_basic_params(const q2proto_connect_t *parsed_connect, conn_par
     /* Reject any client that doesn't support the rerelease features -
      * Old clients can't support certain things, particularly
      * game-controlled pmove. */
-    if (p->protocol != PROTOCOL_VERSION_RERELEASE)
-        return reject("You need a 'rerelease' capable client to connect to this server.\n");
+    if (p->protocol != PROTOCOL_VERSION_4TAK)
+        return reject("You need a 4TAK client to connect to this server.\n");
 
     return true;
 }

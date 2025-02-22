@@ -282,7 +282,7 @@ static void apply_playerstate(const q2proto_svc_playerstate_t *playerstate,
     //
     if (playerstate->delta_bits & Q2P_PSD_PM_TYPE) {
         // assume PM type & flags are from rerelease when using Q2rePRO protocol, vanilla otherwise
-        if (cls.serverProtocol == PROTOCOL_VERSION_RERELEASE)
+        if (cls.serverProtocol == PROTOCOL_VERSION_4TAK)
             to->pmove.pm_type = playerstate->pm_type;
         else
             to->pmove.pm_type = pmtype_from_game3(playerstate->pm_type);
@@ -295,7 +295,7 @@ static void apply_playerstate(const q2proto_svc_playerstate_t *playerstate,
         to->pmove.pm_time = playerstate->pm_time;
 
     if (playerstate->delta_bits & Q2P_PSD_PM_FLAGS) {
-        if(cls.serverProtocol == PROTOCOL_VERSION_RERELEASE)
+        if(cls.serverProtocol == PROTOCOL_VERSION_4TAK)
             to->pmove.pm_flags = playerstate->pm_flags;
         else
             to->pmove.pm_flags = pmflags_from_game3(playerstate->pm_flags, cls.q2proto_ctx.features.server_game_api != Q2PROTO_GAME_VANILLA);
@@ -561,7 +561,7 @@ static void set_server_fps(int value)
 static void CL_ParseServerData(const q2proto_svc_serverdata_t *serverdata)
 {
     char    levelname[MAX_QPATH];
-    int     i, protocol, attractloop q_unused;
+    int     protocol, attractloop q_unused;
     bool    cinematic;
 
     Cbuf_Execute(&cl_cmdbuf);          // make sure any stuffed commands are done
@@ -586,16 +586,7 @@ static void CL_ParseServerData(const q2proto_svc_serverdata_t *serverdata)
             Com_Error(ERR_DROP, "Requested protocol version %d, but server returned %d.",
                       cls.serverProtocol, protocol);
         }
-        // BIG HACK to let demos from release work with the 3.0x patch!!!
-        if (!EXTENDED_SUPPORTED(protocol)
-            && (protocol != PROTOCOL_VERSION_RERELEASE)
-            && (protocol != PROTOCOL_VERSION_KEX_DEMOS)
-            && (protocol != PROTOCOL_VERSION_KEX)
-            && (protocol < PROTOCOL_VERSION_OLD || protocol > PROTOCOL_VERSION_DEFAULT)) {
-            Com_Error(ERR_DROP, "Demo uses unsupported protocol version %d.", protocol);
-        } else {
             cls.serverProtocol = protocol;
-        }
     }
 
     // game directory
@@ -633,90 +624,12 @@ static void CL_ParseServerData(const q2proto_svc_serverdata_t *serverdata)
     cl.serverstate = ss_game;
     cinematic = cl.clientNum == -1;
 
-    if (cls.serverProtocol == PROTOCOL_VERSION_R1Q2) {
-        if (serverdata->r1q2.enhanced) {
-            Com_Error(ERR_DROP, "'Enhanced' R1Q2 servers are not supported");
-        }
-        i = serverdata->protocol_version;
-        // for some reason, R1Q2 servers always report the highest protocol
-        // version they support, while still using the lower version
-        // client specified in the 'connect' packet. oh well...
-        if (!R1Q2_SUPPORTED(i)) {
-            Com_WPrintf(
-                "R1Q2 server reports unsupported protocol version %d.\n"
-                "Assuming it really uses our current client version %d.\n"
-                "Things will break if it does not!\n", i, PROTOCOL_VERSION_R1Q2_CURRENT);
-            i = Q_clip(i, PROTOCOL_VERSION_R1Q2_MINIMUM, PROTOCOL_VERSION_R1Q2_CURRENT);
-        }
-        Com_DPrintf("Using minor R1Q2 protocol version %d\n", i);
-        cls.protocolVersion = i;
-        if (serverdata->strafejump_hack) {
-            Com_DPrintf("R1Q2 strafejump hack enabled\n");
-            cl.pmp.strafehack = true;
-        }
-        cl.esFlags |= MSG_ES_BEAMORIGIN;
-        if (cls.q2proto_ctx.features.has_solid32) {
-            cl.esFlags |= MSG_ES_LONGSOLID;
-        }
-        cl.pmp.speedmult = 2;
-    } else if (cls.serverProtocol == PROTOCOL_VERSION_Q2PRO) {
-        i = serverdata->protocol_version;
-        if (!Q2PRO_SUPPORTED(i)) {
-            Com_Error(ERR_DROP,
-                      "Q2PRO server reports unsupported protocol version %d.\n"
-                      "Current client version is %d.", i, PROTOCOL_VERSION_Q2PRO_CURRENT);
-        }
-        Com_DPrintf("Using minor Q2PRO protocol version %d\n", i);
-        cls.protocolVersion = i;
-        if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_SERVER_STATE) {
-            i = serverdata->q2pro.server_state;
-            Com_DPrintf("Q2PRO server state %d\n", i);
-            cl.serverstate = i;
-            cinematic = i == ss_pic || i == ss_cinematic;
-        }
-        if (serverdata->strafejump_hack) {
-            Com_DPrintf("Q2PRO strafejump hack enabled\n");
-            cl.pmp.strafehack = true;
-        }
-        if (serverdata->q2pro.qw_mode) {
-            Com_DPrintf("Q2PRO QW mode enabled\n");
-            PmoveEnableQW(&cl.pmp);
-        }
-        if (serverdata->q2pro.waterjump_hack) {
-            Com_DPrintf("Q2PRO waterjump hack enabled\n");
-            cl.pmp.waterhack = true;
-        }
-        if (serverdata->q2pro.extensions) {
-            Com_DPrintf("Q2PRO protocol extensions enabled\n");
-            cl.csr = cs_remap_q2pro_new;
-        }
-        if (serverdata->q2pro.extensions_v2) {
-            if (!cl.csr.extended) {
-                Com_Error(ERR_DROP, "Q2PRO_PF_EXTENSIONS_2 without Q2PRO_PF_EXTENSIONS");
-            }
-            Com_DPrintf("Q2PRO protocol extensions v2 enabled\n");
-            cl.esFlags |= MSG_ES_EXTENSIONS_2;
-            cl.psFlags |= MSG_PS_EXTENSIONS_2;
-            if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_PLAYERFOG)
-                cl.psFlags |= MSG_PS_MOREBITS;
-            PmoveEnableExt(&cl.pmp);
-        }
-        cl.esFlags |= MSG_ES_UMASK | MSG_ES_LONGSOLID;
-        if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_BEAM_ORIGIN) {
-            cl.esFlags |= MSG_ES_BEAMORIGIN;
-        }
-        if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_SHORT_ANGLES) {
-            cl.esFlags |= MSG_ES_SHORTANGLES;
-        }
-        cl.pmp.speedmult = 2;
-        cl.pmp.flyhack = true; // fly hack is unconditionally enabled
-        cl.pmp.flyfriction = 4;
-    } else if (cls.serverProtocol == PROTOCOL_VERSION_RERELEASE) {
+    if (cls.serverProtocol == PROTOCOL_VERSION_4TAK) {
         cls.protocolVersion = serverdata->protocol_version;
         cl.serverstate = serverdata->q2pro.server_state;
         cinematic = cl.serverstate == ss_pic || cl.serverstate == ss_cinematic;
         cl.game_api = cls.q2proto_ctx.features.server_game_api;
-        if (cl.game_api == Q2PROTO_GAME_RERELEASE)
+        if (cl.game_api == Q2PROTO_GAME_4TAK)
             cl.csr = cs_remap_rerelease;
         else if (cl.game_api >= Q2PROTO_GAME_Q2PRO_EXTENDED)
             cl.csr = cs_remap_q2pro_new;
@@ -738,22 +651,15 @@ static void CL_ParseServerData(const q2proto_svc_serverdata_t *serverdata)
          * non-rerelease games w/ variable FPS (eg OpenFFA) seem to assume
          * certain things still happen at 10Hz.
          * (For one, view weapon looks janky if the divider is 1.)*/
-        if (cl.game_api == Q2PROTO_GAME_RERELEASE)
+        if (cl.game_api == Q2PROTO_GAME_4TAK)
             cl.frametime.div = 1;
 
         cl.pmp.speedmult = 2;
         cl.pmp.flyhack = true; // fly hack is unconditionally enabled
         cl.pmp.flyfriction = 4;
-    } else if (cls.serverProtocol == PROTOCOL_VERSION_KEX_DEMOS || cls.serverProtocol == PROTOCOL_VERSION_KEX) {
-        cl.game_api = cls.q2proto_ctx.features.server_game_api;
-        cl.csr = cs_remap_rerelease;
-        set_server_fps(serverdata->kex.server_fps);
-        cl.frametime.div = 1;
     } else {
-        // Demo protocol, or vanilla
-        if (serverdata->q2pro.extensions)
-            cl.csr = cs_remap_q2pro_new;
-        cls.protocolVersion = serverdata->protocol_version;
+        //qb: none other supported currently, break
+        Com_Error(ERR_DROP, "CL_ParseServerData Unsupported protocol version %d.", protocol);
     }
 
     if (cl.csr.extended) {
@@ -761,20 +667,18 @@ static void CL_ParseServerData(const q2proto_svc_serverdata_t *serverdata)
         cl.psFlags |= MSG_PS_EXTENSIONS;
 
         // hack for demo playback
-        if (EXTENDED_SUPPORTED(protocol)) {
             if (protocol >= PROTOCOL_VERSION_EXTENDED_LIMITS_2) {
                 cl.esFlags |= MSG_ES_EXTENSIONS_2;
                 cl.psFlags |= MSG_PS_EXTENSIONS_2;
             }
             if (protocol >= PROTOCOL_VERSION_EXTENDED_PLAYERFOG)
                 cl.psFlags |= MSG_PS_MOREBITS;
-        }
 
         cl.pmp.extended_server_ver = cl.psFlags & MSG_PS_EXTENSIONS_2 ? 2 : 1;
     } else
         cl.pmp.extended_server_ver = 0;
 
-    if (cls.serverProtocol == PROTOCOL_VERSION_RERELEASE) {
+    if (cls.serverProtocol == PROTOCOL_VERSION_4TAK) {
         cls.demo.esFlags = cl.esFlags;
     } else {
         // use full extended flags unless writing backward compatible demo
@@ -787,7 +691,7 @@ static void CL_ParseServerData(const q2proto_svc_serverdata_t *serverdata)
     CL_Configstrings_init();
 
     // Load cgame (after we know all the timings)
-    CG_Load(cl.gamedir, cl.game_api == Q2PROTO_GAME_RERELEASE);
+    CG_Load(cl.gamedir, cl.game_api == Q2PROTO_GAME_4TAK);
     cgame->Init();
 
     if (cinematic) {
