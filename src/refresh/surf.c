@@ -967,12 +967,15 @@ static void set_world_size(const mnode_t *node)
     for (i = 0, size = 0; i < 3; i++)
         size = max(size, node->maxs[i] - node->mins[i]);
 
-    if (size > 4096)
+    if (size > 32768)
+        gl_static.world.size = 2097152; //qb: bigmaps- max possible with int23 coords
+    else if (size > 8192)
+        gl_static.world.size = 65536; //qb: bigmaps- practical limit of map editor
+    else if (size > 4096)
         gl_static.world.size = 8192;
     else if (size > 2048)
         gl_static.world.size = 4096;
-    else
-        gl_static.world.size = 2048;
+        
 }
 
 // called from the main loop whenever lighting parameters change

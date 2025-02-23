@@ -3948,63 +3948,6 @@ static void fs_game_generator(genctx_t *ctx)
         list_dirs(ctx, sys_homedir->string);
 }
 
-// TODO: find a better home (lol) for me
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
-
-/*
-================
-FS_FindBaseDir
-================
-*/
-static void FS_FindBaseDir(void)
-{
-    // TODO: figure out something here. DEFGAME macro
-    // is empty by default which we should fix.
-    //static const char *defgame = "baseq2";
-
-    // Don't try to detect the base directory if it was already explicitly specified
-    bool detect_base_dir = !strcmp(sys_basedir->string, sys_basedir->default_string);
-    /* Only detect libdir on Windows:
-     * At least on Linux, a detected game directory probably contains a game .DLL, but no .SO,
-     * so we're better off using our own game .SOs from the default dir */
-#ifdef _WIN32
-    detect_base_dir &= !strcmp(sys_libdir->string, sys_libdir->default_string);
-#endif
-
-    if (detect_base_dir) {
-        // find Steam installation dir first
-        char client_dir[MAX_OSPATH] = { 0 };
-
-        const sys_getinstalledgamepath_func_t *gamepath_func = gamepath_funcs;
-        while (*gamepath_func && !(*gamepath_func)(com_rerelease->integer, client_dir, sizeof(client_dir)))
-        {
-            gamepath_func++;
-        }
-
-        // Don't set an "empty" base dir, use defaults instead
-        if (*client_dir) {
-            Cvar_Set("basedir", client_dir);
-        #ifdef _WIN32
-            Cvar_Set("libdir", client_dir);
-        #endif
-        }
-    }
-
-    // TODO: find a better home (lol) for me
-#ifdef _WIN32
-    if (com_rerelease->integer == RERELEASE_MODE_YES) {
-        char homedir[MAX_OSPATH];
-        if (Sys_GetRereleaseHomeDir(homedir, sizeof(homedir) - 2)) {
-            FS_NormalizePath(homedir);
-            Cvar_Set("homedir", homedir);
-        }
-    }
-#endif
-}
-
 /*
 ================
 FS_Init
@@ -4032,11 +3975,6 @@ void FS_Init(void)
 
     // get the game cvar and start the filesystem
     fs_game = Cvar_Get("game", DEFGAME, CVAR_LATCH | CVAR_SERVERINFO | CVAR_NOARCHIVE);
-
-    if (com_rerelease->integer != RERELEASE_MODE_NEVER) {
-        FS_FindBaseDir();
-    }
-
     fs_game->changed = fs_game_changed;
     fs_game->generator = fs_game_generator;
     fs_game_changed(fs_game);

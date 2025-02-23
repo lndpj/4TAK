@@ -127,7 +127,7 @@ static void InitGame(void)
     deathmatch = gi.cvar("deathmatch", "0", CVAR_LATCH);
     coop = gi.cvar("coop", "0", CVAR_LATCH);
     skill = gi.cvar("skill", "1", CVAR_LATCH);
-    maxentities = gi.cvar("maxentities", "1024", CVAR_LATCH);
+    maxentities = gi.cvar("maxentities", "8192", CVAR_LATCH);  //qb: was 1024
 
     // change anytime vars
     dmflags = gi.cvar("dmflags", "0", CVAR_SERVERINFO);
@@ -157,12 +157,12 @@ static void InitGame(void)
     sv_maplist = gi.cvar("sv_maplist", "", 0);
 
     // obtain server features
-    sv_features = gi.cvar("sv_features", NULL, 0);
+    sv_features = gi.cvar("sv_features", (const char *)G_FEATURES, 0);  //qb:  bigmap needed feature
 
     // enable protocol extensions if supported
     if (sv_features && (int)sv_features->value & GMF_PROTOCOL_EXTENSIONS && (int)g_protocol_extensions->value) {
         features |= GMF_PROTOCOL_EXTENSIONS;
-        game.csr = cs_remap_q2pro_new;
+        game.csr = cs_remap_rerelease; //qb: was cs_remap_q2pro_new
     } else {
         game.csr = cs_remap_old;
     }
