@@ -9,7 +9,6 @@ Goals:
 * All re-release content fully playable (mostly complete; some minor visual things unfinished)
 * Compatibility with existing Quake II network protocols (incomplete; our first focus is the first point)
 * Full netplay support with the native re-release game DLL (incomplete; it works better with our custom game_x64 but is still a WIP)
-* No installation required (complete! all you need is the exe; for Win64, no additional DLLs or files are required. Just open & play whenever; it will pick up your Steam / GoG installation directory. You can also drop it into your game dir like other clients.)
 * Full support of all re-release features (mostly complete; see Issues tab for things unfinished)
 * Default configuration should match re-release (complete but still being worked on)
 

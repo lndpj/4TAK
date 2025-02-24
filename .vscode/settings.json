@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "client.h": "c"
+        "client.h": "c",
+        "charconv": "cpp",
+        "format": "cpp",
+        "xutility": "cpp"
     }
 }

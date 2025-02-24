@@ -71,9 +71,6 @@ typedef enum {
     RERELEASE_MODE_NEVER = -1 // do not attempt any sort of auto-detection
 } rerelease_mode_t;
 
-typedef bool (*sys_getinstalledgamepath_func_t)(rerelease_mode_t rr_mode, char *path, size_t path_length);
-
-extern const sys_getinstalledgamepath_func_t gamepath_funcs[];
 
 void    Sys_DebugBreak(void);
 bool    Sys_IsMainThread(void);
