@@ -1207,19 +1207,21 @@ typedef struct {
 typedef uint64_t effects_t;
 
 // entity_state_t->renderfx flags
-#define RF_MINLIGHT         BIT(0)      // always have some light (viewmodel)
+//qb: more efficient ordering, fewer bytes
+#define RF_MINLIGHT         BIT(0)      // allways have some light (viewmodel)
 #define RF_VIEWERMODEL      BIT(1)      // don't draw through eyes, only mirrors
-#define RF_WEAPONMODEL      BIT(2)      // only draw through eyes
-#define RF_FULLBRIGHT       BIT(3)      // always draw full intensity
-#define RF_DEPTHHACK        BIT(4)      // for view weapon Z crunching
-#define RF_TRANSLUCENT      BIT(5)
+#define RF_FULLBRIGHT       BIT(2)      // allways draw full intensity
+#define RF_SHELL_RED        BIT(3)
+#define RF_SHELL_GREEN      BIT(4)
+#define RF_SHELL_BLUE       BIT(5)
 #define RF_FRAMELERP        BIT(6)
 #define RF_BEAM             BIT(7)
 #define RF_CUSTOMSKIN       BIT(8)      // skin is an index in image_precache
 #define RF_GLOW             BIT(9)      // pulse lighting for bonus items
-#define RF_SHELL_RED        BIT(10)
-#define RF_SHELL_GREEN      BIT(11)
-#define RF_SHELL_BLUE       BIT(12)
+#define RF_WEAPONMODEL      BIT(10)      // only draw through eyes
+#define RF_DEPTHHACK        BIT(11)      // for view weapon Z crunching
+#define RF_TRANSLUCENT      BIT(12)
+
 #define RF_NOSHADOW         BIT(13)     // used by YQ2
 #define RF_CASTSHADOW       BIT(14)     // used by KEX
 

@@ -381,45 +381,45 @@ typedef enum {
 
 // entity_state_t communication
 
-// try to pack the common update flags into the first byte
+//qb: more efficient packing sequence
 #define U_ORIGIN1       BIT_ULL(0)
 #define U_ORIGIN2       BIT_ULL(1)
-#define U_ANGLE2        BIT_ULL(2)
-#define U_ANGLE3        BIT_ULL(3)
-#define U_FRAME8        BIT_ULL(4)      // frame is a byte
-#define U_EVENT         BIT_ULL(5)
-#define U_REMOVE        BIT_ULL(6)      // REMOVE this entity, don't add it
-#define U_MOREBITS1     BIT_ULL(7)      // read one additional byte
+#define U_ORIGIN3       BIT_ULL(2)
+#define U_ANGLE2        BIT_ULL(3)
+#define U_FRAME8        BIT_ULL(4)
+#define U_NUMBER16      BIT_ULL(5)
+#define U_REMOVE        BIT_ULL(6)      
+#define U_MOREBITS1     BIT_ULL(7)      
 
 // second byte
-#define U_NUMBER16      BIT_ULL(8)      // NUMBER8 is implicit if not set
-#define U_ORIGIN3       BIT_ULL(9)
-#define U_ANGLE1        BIT_ULL(10)
-#define U_MODEL         BIT_ULL(11)
-#define U_RENDERFX8     BIT_ULL(12)     // fullbright, etc
-#define U_ANGLE16       BIT_ULL(13)
-#define U_EFFECTS8      BIT_ULL(14)     // autorotate, trails, etc
-#define U_MOREBITS2     BIT_ULL(15)     // read one additional byte
+#define U_ANGLE1        BIT_ULL(8)
+#define U_ANGLE3        BIT_ULL(9)
+#define U_ANGLE16       BIT_ULL(10)
+#define U_OLDORIGIN     BIT_ULL(11)
+#define U_MODEL         BIT_ULL(12)
+#define U_RENDERFX8     BIT_ULL(13)
+#define U_SOUND         BIT_ULL(14)
+#define U_MOREBITS2     BIT_ULL(15)     
 
 // third byte
-#define U_SKIN8         BIT_ULL(16)
-#define U_FRAME16       BIT_ULL(17)     // frame is a short
-#define U_RENDERFX16    BIT_ULL(18)     // 8 + 16 = 32
-#define U_EFFECTS16     BIT_ULL(19)     // 8 + 16 = 32
-#define U_MODEL2        BIT_ULL(20)     // weapons, flags, etc
-#define U_MODEL3        BIT_ULL(21)
-#define U_MODEL4        BIT_ULL(22)
-#define U_MOREBITS3     BIT_ULL(23)     // read one additional byte
+#define U_RENDERFX16    BIT_ULL(16)
+#define U_SKIN8         BIT_ULL(17)
+#define U_FRAME16       BIT_ULL(18)
+#define U_EFFECTS8      BIT_ULL(19)
+#define U_EFFECTS16     BIT_ULL(20)     
+#define U_EVENT         BIT_ULL(21)
+#define U_SOLID         BIT_ULL(22)
+#define U_MOREBITS3     BIT_ULL(23)     
 
 // fourth byte
-#define U_OLDORIGIN     BIT_ULL(24)     // FIXME: get rid of this
-#define U_SKIN16        BIT_ULL(25)
-#define U_SOUND         BIT_ULL(26)
-#define U_SOLID         BIT_ULL(27)
+#define U_SKIN16        BIT_ULL(24)
+#define U_MODEL2        BIT_ULL(25)
+#define U_MODEL3        BIT_ULL(26)
+#define U_MODEL4        BIT_ULL(27)
 #define U_MODEL16       BIT_ULL(28)
 #define U_MOREFX8       BIT_ULL(29)
 #define U_ALPHA         BIT_ULL(30)
-#define U_MOREBITS4     BIT_ULL(31)     // read one additional byte
+#define U_MOREBITS4     BIT_ULL(31)
 
 // fifth byte
 #define U_SCALE         BIT_ULL(32)
@@ -429,6 +429,7 @@ typedef enum {
 #define U_EFFECTS32     (U_EFFECTS8 | U_EFFECTS16)
 #define U_RENDERFX32    (U_RENDERFX8 | U_RENDERFX16)
 #define U_MOREFX32      (U_MOREFX8 | U_MOREFX16)
+ 
 
 // ==============================================================
 

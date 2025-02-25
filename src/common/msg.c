@@ -579,7 +579,7 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
 
         bits = U_REMOVE;
         if (from->number & 0xff00)
-            bits |= U_NUMBER16 | U_MOREBITS1;
+            bits |= U_NUMBER16; //qb: remove hack | U_MOREBITS1
 
         MSG_WriteByte(bits & 255);
         if (bits & 0x0000ff00)
