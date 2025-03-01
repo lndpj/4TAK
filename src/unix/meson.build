@@ -3,7 +3,6 @@ common_src += files('system.c', 'hunk.c')
 libm = cc.find_library('m', required: false)
 if libm.found()
   common_deps += libm
-  game_deps += libm
 endif
 
 librt = cc.find_library('rt', required: false)

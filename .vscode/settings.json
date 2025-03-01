@@ -3,6 +3,7 @@
         "client.h": "c",
         "charconv": "cpp",
         "format": "cpp",
-        "xutility": "cpp"
+        "xutility": "cpp",
+        "algorithm": "cpp"
     }
 }

@@ -17,12 +17,7 @@ client_src += windows.compile_resources('res/q2pro.rc',
 
 server_src += windows.compile_resources('res/q2proded.rc',
   args:                rc_args,
-  depend_files:        ['res/q2proded.ico', 'res/q2proded.exe.manifest'],
-  include_directories: rc_inc,
-)
-
-game_src += windows.compile_resources('res/game.rc',
-  args:                rc_args,
+  depend_files:        ['res/q2proded.ico', 'res/4TAKded.exe.manifest'],
   include_directories: rc_inc,
 )
 
