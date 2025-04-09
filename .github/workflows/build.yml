@@ -43,14 +43,6 @@ env:
     -Dwrap_mode=nofallback
     --force-fallback-for=fmt,jsoncpp,ffmpeg
 
-  MESON_ARGS_FREEBSD: >-
-    -Dbuildtype=release
-    -Dc_std=c23
-    -Dicmp-errors=disabled
-    -Dwindows-crash-dumps=disabled
-    -Dwrap_mode=nofallback
-    --force-fallback-for=fmt,jsoncpp,openal-soft,ffmpeg
-
 jobs:
   mingw:
     runs-on: ubuntu-24.04
@@ -205,25 +197,3 @@ jobs:
       - name: Build - meson compile
         run: |
           meson compile -C builddir
-
-  freebsd:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: Build
-        uses: cross-platform-actions/action@v0.29.0
-        with:
-          operating_system: freebsd
-          architecture: x86-64
-          version: '14.3'
-          run: |
-            sudo pkg update
-            sudo pkg install -y git meson pkgconf nasm python \
-            sdl2 curl png jpeg-turbo libX11 libdecor evdev-proto wayland-protocols
-            meson setup ${{ env.MESON_ARGS }} ${{ env.MESON_ARGS_FREEBSD }} builddir
-            meson configure builddir
-            meson compile -C builddir
