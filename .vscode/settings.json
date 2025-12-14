@@ -4,6 +4,7 @@
         "charconv": "cpp",
         "format": "cpp",
         "xutility": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "cmath": "c"
     }
 }

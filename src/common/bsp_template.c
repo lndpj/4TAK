@@ -66,6 +66,7 @@ BSP_LOAD(Visibility)
     BSP_ENSURE(count >= 4, "Too small header");
 
     uint32_t numclusters = BSP_Long();
+   //qb: debug Com_Printf ("Map clusters: %i \n", numclusters);
     BSP_ENSURE(numclusters <= MAX_MAP_CLUSTERS, "Too many clusters");
 
     uint32_t hdrsize = 4 + numclusters * 8;
