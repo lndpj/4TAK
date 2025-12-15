@@ -1907,7 +1907,7 @@ int FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag)
     file_t *file;
     qhandle_t f;
     byte *buf;
-    int64_t len;
+    long len;
     int read;
 
     Q_assert(path);
@@ -1940,7 +1940,7 @@ int FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag)
 
     // sanity check file size
     if (len > MAX_LOADFILE) {
-        Com_Printf("File size: %i\n", len);
+        Com_Printf("File size: %lld\n", len);
         len = Q_ERR(EFBIG);
         goto done;
     }
