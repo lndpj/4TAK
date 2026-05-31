@@ -50,6 +50,17 @@ static byte deflate_buf[MAX_DEFLATED_SIZE];
 
 q2protoio_ioarg_t default_q2protoio_ioarg = {.sz_read = &msg_read, .sz_write = &msg_write, .max_msg_len = 1384 /* conservative default */ };
 
+/* These identifiers are engine-side aliases for protocol I/O.
+ * In q2repro, they typically alias the default I/O arg sentinel. */
+#define Q2PROTO_IOARG_SERVER_READ            _Q2PROTO_IOARG_DEFAULT
+#define Q2PROTO_IOARG_SERVER_WRITE           _Q2PROTO_IOARG_DEFAULT
+#define Q2PROTO_IOARG_SERVER_WRITE_MULTICAST  _Q2PROTO_IOARG_DEFAULT
+
+static q_forceinline q2protoio_ioarg_t *get_io_data(uintptr_t io_arg)
+{
+    return (io_arg == _Q2PROTO_IOARG_DEFAULT) ? &default_q2protoio_ioarg : (q2protoio_ioarg_t *)io_arg;
+}
+
 #if USE_ZLIB
 static q2protoio_ioarg_t inflate_q2protoio_ioarg = {.sz_read = &msg_inflate, .sz_write = &msg_write};
 static q2protoio_ioarg_t deflate_q2protoio_ioarg = {.sz_write = &msg_deflate};
@@ -62,12 +73,7 @@ static q2protoio_ioarg_t deflate_q2protoio_ioarg = {.sz_write = &msg_deflate};
 
 static byte* io_read_data(uintptr_t io_arg, size_t len, size_t *readcount)
 {
-#if !USE_ZLIB
-    Q_assert(io_arg == _Q2PROTO_IOARG_DEFAULT);
-#else
-    Q_assert(io_arg == _Q2PROTO_IOARG_DEFAULT || io_arg == IOARG_INFLATE);
-#endif
-    sizebuf_t *sz = ((q2protoio_ioarg_t*)io_arg)->sz_read;
+    sizebuf_t *sz = get_io_data(io_arg)->sz_read;
 
     if (readcount) {
         len = min(len, sz->cursize - sz->readcount);
@@ -122,7 +128,7 @@ const void* q2protoio_read_raw(uintptr_t io_arg, size_t size, size_t* readcount)
 
 size_t q2protoio_read_available(uintptr_t io_arg)
 {
-    const q2protoio_ioarg_t *io_data = (const q2protoio_ioarg_t *)io_arg;
+    const q2protoio_ioarg_t *io_data = get_io_data(io_arg);
     sizebuf_t *sz = io_data->sz_read;
     return sz->cursize - sz->readcount;
 }
@@ -254,7 +260,7 @@ q2proto_error_t q2protoio_deflate_end(uintptr_t deflate_io_arg)
 
 static void* io_reserve_data(uintptr_t io_arg, size_t size)
 {
-    sizebuf_t *sz = ((q2protoio_ioarg_t*)io_arg)->sz_write;
+    sizebuf_t *sz = get_io_data(io_arg)->sz_write;
     return SZ_GetSpace(sz, size);
 }
 
@@ -289,7 +295,7 @@ void* q2protoio_write_reserve_raw(uintptr_t io_arg, size_t size)
 
 void q2protoio_write_raw(uintptr_t io_arg, const void* data, size_t size, size_t *written)
 {
-    q2protoio_ioarg_t *io_data = (q2protoio_ioarg_t *)io_arg;
+    q2protoio_ioarg_t *io_data = get_io_data(io_arg);
     sizebuf_t *sz = io_data->sz_write;
 
     if (io_data->deflate && written)
@@ -325,7 +331,7 @@ void q2protoio_write_raw(uintptr_t io_arg, const void* data, size_t size, size_t
 
 size_t q2protoio_write_available(uintptr_t io_arg)
 {
-    const q2protoio_ioarg_t *io_data = (const q2protoio_ioarg_t *)io_arg;
+    const q2protoio_ioarg_t *io_data = get_io_data(io_arg);
     sizebuf_t *sz = io_data->sz_write;
 #if USE_ZLIB
     if (io_data->deflate)

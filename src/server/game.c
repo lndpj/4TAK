@@ -1177,4 +1177,5 @@ void SV_InitGameProgs(void)
 
     svs.server_info.game_api = svs.game_api;
     svs.server_info.default_packet_length = MAX_PACKETLEN_WRITABLE_DEFAULT;
+    svs.server_info.server_fps = SV_FRAMERATE;
 }

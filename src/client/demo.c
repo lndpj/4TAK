@@ -510,8 +510,9 @@ static void CL_Record_f(void)
     memset(&cls.demo.server_info, 0, sizeof(cls.demo.server_info));
     cls.demo.server_info.game_api = cls.q2proto_ctx.features.server_game_api;
     cls.demo.server_info.default_packet_length = size;
+    cls.demo.server_info.server_fps = (int)cl.frametime_inv;
 
-    q2proto_error_t err = q2proto_init_servercontext_demo(&cls.demo.q2proto_context, &cls.demo.server_info, &size);
+    q2proto_error_t err = q2proto_init_servercontext_demo(&cls.demo.q2proto_context, Q2P_PROTOCOL_INVALID, &cls.demo.server_info, &size);
     if (err != Q2P_ERR_SUCCESS) {
         Com_EPrintf("Failed to start demo recording: %s.\n", q2proto_error_string(err));
         return;
@@ -557,7 +558,6 @@ static void CL_Record_f(void)
     message_svcdata.serverdata.gamedir = q2proto_make_string(cl.gamedir);
     message_svcdata.serverdata.clientnum = cl.clientNum;
     message_svcdata.serverdata.levelname = q2proto_make_string(cl.configstrings[CS_NAME]);
-    message_svcdata.serverdata.q2repro.server_fps = cl.frametime_inv * 1000;
     q2proto_server_write(&cls.demo.q2proto_context, Q2PROTO_IOARG_DEMO_WRITE, &message_svcdata);
 
     q2proto_gamestate_t gamestate = {.num_configstrings = 0, .configstrings = configstrings, .num_spawnbaselines = 0, .spawnbaselines = spawnbaselines};

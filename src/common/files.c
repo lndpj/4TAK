@@ -1907,7 +1907,7 @@ int FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag)
     file_t *file;
     qhandle_t f;
     byte *buf;
-    long len;
+    int64_t len;
     int read;
 
     Q_assert(path);
