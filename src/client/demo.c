@@ -28,6 +28,7 @@ static cvar_t   *cl_demosnaps;
 static cvar_t   *cl_demomsglen;
 static cvar_t   *cl_demowait;
 static cvar_t   *cl_demosuspendtoggle;
+static cvar_t   *cl_demo_protocol_kex;
 
 q2protoio_ioarg_t demo_q2protoio_ioarg = {.sz_write = &cls.demo.buffer};
 
@@ -512,12 +513,25 @@ static void CL_Record_f(void)
     cls.demo.server_info.default_packet_length = size;
     cls.demo.server_info.server_fps = (int)cl.frametime_inv;
 
-    q2proto_error_t err = q2proto_init_servercontext_demo(&cls.demo.q2proto_context, Q2P_PROTOCOL_INVALID, &cls.demo.server_info, &size);
+    q2proto_protocol_t demo_protocol = Q2P_PROTOCOL_INVALID;
+    if (cls.demo.server_info.game_api == Q2PROTO_GAME_RERELEASE && cl_demo_protocol_kex->value == 0)
+        demo_protocol = Q2P_PROTOCOL_Q2REPRO;
+    q2proto_error_t err = q2proto_init_servercontext_demo(&cls.demo.q2proto_context, demo_protocol, &cls.demo.server_info, &size);
     if (err != Q2P_ERR_SUCCESS) {
         Com_EPrintf("Failed to start demo recording: %s.\n", q2proto_error_string(err));
         return;
     }
     demo_q2protoio_ioarg.max_msg_len = size;
+
+#if USE_ZLIB
+    // Some protocols we might write support deflated packages in demos
+    if (!cls.demo.z_buffer) {
+        cls.demo.z_buffer_size = deflateBound(NULL, MAX_MSGLEN) + 6 /* zlib header/footer */;
+        cls.demo.z_buffer = Z_Malloc(cls.demo.z_buffer_size);
+    }
+
+    Q2PROTO_deflate_args_init(&cls.demo.q2proto_deflate, cls.demo.z_buffer, cls.demo.z_buffer_size, TAG_GENERAL);
+#endif
 
     //
     // open the demo file
@@ -558,6 +572,7 @@ static void CL_Record_f(void)
     message_svcdata.serverdata.gamedir = q2proto_make_string(cl.gamedir);
     message_svcdata.serverdata.clientnum = cl.clientNum;
     message_svcdata.serverdata.levelname = q2proto_make_string(cl.configstrings[CS_NAME]);
+    message_svcdata.serverdata.server_fps = cl.frametime_inv * 1000;
     q2proto_server_write(&cls.demo.q2proto_context, Q2PROTO_IOARG_DEMO_WRITE, &message_svcdata);
 
     q2proto_gamestate_t gamestate = {.num_configstrings = 0, .configstrings = configstrings, .num_spawnbaselines = 0, .spawnbaselines = spawnbaselines};
@@ -585,12 +600,16 @@ static void CL_Record_f(void)
         baseline->entnum = ent->number;
         q2proto_packed_entity_state_t packed_entity;
         PackEntity(&cls.demo.q2proto_context, ent, &packed_entity);
-        Q2PROTO_MakeEntityDelta(&cls.demo.q2proto_context, &baseline->delta_state, NULL, &packed_entity, 0);
+        Q2PROTO_MakeEntityDelta(&cls.demo.q2proto_context, &baseline->delta_state, NULL, &packed_entity, MSG_ES_NEWENTITY);
     }
 
+    q2protoio_deflate_args_t *deflate_args = NULL;
+#if USE_ZLIB
+    deflate_args = &cls.demo.q2proto_deflate;
+#endif
     int write_result;
     do {
-        write_result = q2proto_server_write_gamestate(&cls.demo.q2proto_context, NULL, Q2PROTO_IOARG_DEMO_WRITE, &gamestate);;
+        write_result = q2proto_server_write_gamestate(&cls.demo.q2proto_context, deflate_args, Q2PROTO_IOARG_DEMO_WRITE, &gamestate);;
         CL_WriteDemoMessage(&cls.demo.buffer);
     } while (write_result == Q2P_ERR_NOT_ENOUGH_PACKET_SPACE);
 
@@ -1561,6 +1580,7 @@ void CL_InitDemos(void)
     cl_demomsglen = Cvar_Get("cl_demomsglen", va("%d", MAX_PACKETLEN_WRITABLE_DEFAULT), 0);
     cl_demowait = Cvar_Get("cl_demowait", "0", 0);
     cl_demosuspendtoggle = Cvar_Get("cl_demosuspendtoggle", "1", 0);
+    cl_demo_protocol_kex = Cvar_Get("cl_demo_protocol_kex", "1", 0);
 
     Cmd_Register(c_demo);
 }

@@ -646,7 +646,7 @@ static void CL_ParseServerData(const q2proto_svc_serverdata_t *serverdata)
         if (cl.game_api == Q2PROTO_GAME_Q2PRO_EXTENDED_V2)
             cl.psFlags |= MSG_PS_EXTENSIONS_2;
         cl.esFlags |= MSG_ES_RERELEASE | CL_ES_EXTENDED_MASK;
-        set_server_fps(serverdata->q2repro.server_fps);
+        set_server_fps(serverdata->server_fps);
         /* Rerelease game assumes client & server framerate is in sync,
          * non-rerelease games w/ variable FPS (eg OpenFFA) seem to assume
          * certain things still happen at 10Hz.
@@ -657,6 +657,11 @@ static void CL_ParseServerData(const q2proto_svc_serverdata_t *serverdata)
         cl.pmp.speedmult = 2;
         cl.pmp.flyhack = true; // fly hack is unconditionally enabled
         cl.pmp.flyfriction = 4;
+    } else if (cls.serverProtocol == PROTOCOL_VERSION_KEX_DEMOS || cls.serverProtocol == PROTOCOL_VERSION_KEX) {
+        cl.game_api = cls.q2proto_ctx.features.server_game_api;
+        cl.csr = cs_remap_rerelease;
+        set_server_fps(serverdata->server_fps);
+        cl.frametime.div = 1;
     } else {
         //qb: none other supported currently, break
         Com_Error(ERR_DROP, "CL_ParseServerData Unsupported protocol version %d.", protocol);
@@ -837,9 +842,49 @@ static void CL_CheckForIP(const char *s)
     }
 }
 
+/*
+ * Replace ##P<n> tokens with player names from cl.clientinfo.
+ * Per server game.c: "the client is supposed to translate ##P<n> to
+ * player names".
+ */
+static void CL_TranslatePlayerNameTokens(char *s, size_t size)
+{
+    char out[MAX_STRING_CHARS];
+    const char *src = s;
+    char *dst = out;
+
+    while (*src) {
+        size_t space = sizeof(out) - (size_t)(dst - out) - 1;
+        if (!space)
+            break;
+
+        if (!strncmp(src, "##P", 3) && Q_isdigit(src[3])) {
+            src += 3;
+            int playernum = 0;
+            while (Q_isdigit(*src))
+                playernum = playernum * 10 + (*src++ - '0');
+
+            if (playernum < MAX_CLIENTS) {
+                const char *name = cl.clientinfo[playernum].name;
+                size_t len = min(strlen(name), space);
+                memcpy(dst, name, len);
+                dst += len;
+            }
+            continue;
+        }
+        *dst++ = *src++;
+    }
+    *dst = '\0';
+    Q_strlcpy(s, out, size);
+}
+
 static void CL_HandlePrint(int level, char *s)
 {
     const char *fmt;
+
+    /* Called here rather than CL_ParseLocPrint() because ##P tokens
+     * arrive via svc_print broadcast messages, not localized prints. */
+    CL_TranslatePlayerNameTokens(s, MAX_STRING_CHARS);
 
     if (level != PRINT_CHAT) {
         if (cl.csr.extended) {
@@ -879,7 +924,8 @@ static void CL_HandlePrint(int level, char *s)
     CL_CheckForIP(s);
 
     // disable notify
-    if (!cl_chat_notify->integer) {
+    bool use_cgame_notify = cl_cgame_notify->integer && cl.csr.extended;
+    if (!cl_chat_notify->integer || use_cgame_notify) {
         Con_SkipNotify(true);
     }
 
@@ -892,6 +938,10 @@ static void CL_HandlePrint(int level, char *s)
     }
 
     Com_LPrintf(PRINT_TALK, fmt, s);
+
+    if (use_cgame_notify) {
+        cgame->NotifyMessage(0, s, level == PRINT_CHAT);
+    }
 
     Con_SkipNotify(false);
 
@@ -1273,9 +1323,19 @@ void CL_ParseServerMessage(void)
             // it is very easy to overflow standard 1390 bytes
             // demo frame with modern servers... attempt to preserve
             // reliable messages at least, assuming they come first
+            bool written = false;
             if (cls.demo.buffer.cursize + len < cls.demo.buffer.maxsize) {
-                SZ_Write(&cls.demo.buffer, msg_read.data + readcount, len);
-            } else {
+                uint32_t old_size = cls.demo.buffer.cursize;
+                q2proto_error_t write_result = q2proto_server_write(&cls.demo.q2proto_context, Q2PROTO_IOARG_DEMO_WRITE, &svc_msg);
+                written = write_result == Q2P_ERR_SUCCESS;
+                if (!written) {
+                    Com_WPrintf("%s: failed to write message of type %s: %s\n", __func__, q2proto_svc_message_str(svc_msg.type), q2proto_error_string(write_result));
+                    // Roll back to previous message, in case of failure
+                    cls.demo.buffer.cursize = old_size;
+                    cls.demo.buffer.overflowed = false;
+                }
+            }
+            if(!written) {
                 cls.demo.others_dropped++;
             }
         }
