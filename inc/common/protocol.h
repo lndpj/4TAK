@@ -58,6 +58,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define PROTOCOL_VERSION_MVD_EXTENDED_LIMITS_2  2012    // r3300
 #define PROTOCOL_VERSION_MVD_PLAYERFOG          2013    // r3579
 #define PROTOCOL_VERSION_MVD_CURRENT            2013    // r3579
+#define PROTOCOL_VERSION_KEX_DEMOS              2022
+#define PROTOCOL_VERSION_KEX                    2023
 #define PROTOCOL_VERSION_MVD_RERELEASE          3038
 
 #define R1Q2_SUPPORTED(x) \
