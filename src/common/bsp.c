@@ -494,6 +494,8 @@ static bool BSP_ParseLightgridHeader_(lightgrid_t *grid, sizebuf_t *s)
 {
     int i;
 
+    grid->numsamples = 0;
+
     for (i = 0; i < 3; i++)
         grid->scale[i] = 1.0f / SZ_ReadFloat(s);
     for (i = 0; i < 3; i++)
@@ -584,6 +586,7 @@ static bool BSP_ValidateLightgrid_r(const lightgrid_t *grid, uint32_t nodenum)
     return true;
 }
 
+//qb: report errors to help debug q2tool
 static void BSP_ParseLightgrid(bsp_t *bsp, const byte *in, size_t filelen)
 {
     lightgrid_t *grid = &bsp->lightgrid;
@@ -592,11 +595,15 @@ static void BSP_ParseLightgrid(bsp_t *bsp, const byte *in, size_t filelen)
     lightgrid_sample_t *sample;
     uint32_t remaining;
     sizebuf_t s;
-    byte *data;
+    const byte *data;
     size_t size;
     int i, j;
 
     if (!grid->numleafs)
+        return;
+
+    // Sanity check to prevent massive allocations from corrupted headers
+    if (grid->numsamples > 10000000)
         return;
 
     // ignore if map isn't lit

@@ -604,17 +604,6 @@ static void GL_DrawEntities(entity_t *ent)
             continue;
         }
 
-        if (model->type == MOD_ALIAS) {
-            vec3_t ambient, directed, lightdir;
-            GL_LightPointExt(ent->origin, ambient, directed, lightdir);
-            VectorCopy(ambient, gls.u_block.mesh.color);
-            gls.u_block.mesh.color[3] = (ent->flags & RF_TRANSLUCENT) ? ent->alpha : 1.0f;
-            VectorCopy(lightdir, gls.u_block.mesh.shadedir);
-            // Store the magnitude of the directed light to scale the shading in the fragment shader
-            gls.u_block.mesh.shadedir[3] = LUMINANCE(directed[0], directed[1], directed[2]);
-            gls.u_block_dirty = true;
-        }
-
         switch (model->type) {
         case MOD_ALIAS:
             GL_DrawAliasModel(model);
@@ -1107,7 +1096,7 @@ static void GL_Register(void)
     gl_partstyle = Cvar_Get("gl_partstyle", "0", 0);
     gl_beamstyle = Cvar_Get("gl_beamstyle", "0", 0);
     gl_celshading = Cvar_Get("gl_celshading", "0", 0);
-    gl_dotshading = Cvar_Get("gl_dotshading", "0", 0);
+    gl_dotshading = Cvar_Get("gl_dotshading", "1", 0);
     gl_shadows = Cvar_Get("gl_shadows", "2", CVAR_ARCHIVE);
     gl_modulate = Cvar_Get("gl_modulate", "2", CVAR_ARCHIVE);
     gl_modulate->changed = gl_modulate_changed;

@@ -188,10 +188,12 @@ static void write_shadedot(sizebuf_t *buf)
     GLSL(
         float shadedot(vec3 normal) {
             float d = dot(normal, u_shadedir.xyz);
-            // u_shadedir.w contains the luminance of the directed light component.
-            // We apply it as a boost over the base ambient color (u_color).
-            // A value of 1.0 represents the standard "half-lambert" style base.
-            return 1.0 + max(d, 0.0) * u_shadedir.w;
+            if (u_shadedir.w > 0.0) {
+                float s = (d < 0.0 ? d * 0.3 : d);
+                return max(1.0 + s * u_shadedir.w, 0.1);
+            }
+            // Fallback Quake II shading logic
+            return (d < 0.0 ? d * 0.3 : d) + 1.0;
         }
     )
 }

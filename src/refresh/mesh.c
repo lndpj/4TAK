@@ -34,6 +34,8 @@ static vec3_t   newscale;
 static vec3_t   translate;
 static vec_t    shellscale;
 static vec4_t   color;
+static vec3_t   shadedir_v;
+static float    directed_lum;
 static glStateBits_t    meshbits;
 static GLuint   buffer;
 
@@ -59,11 +61,15 @@ static void setup_dotshading(void)
 
     dotshading = false;
 
-    if (!gl_dotshading->integer || (gl_static.use_shaders && gl_per_pixel_lighting->integer))
+    // Allow environment shading even if PPL is handling dynamic dlights
+    if (!gl_dotshading->integer)
         return;
 
     if (glr.ent->flags & (RF_SHELL_MASK | RF_TRACKER))
         return;
+
+    if (directed_lum > 0)
+        goto use_grid;
 
     if (drawshadow == SHADOW_ONLY)
         return;
@@ -79,11 +85,23 @@ static void setup_dotshading(void)
     shadedir[0] = cp * cy;
     shadedir[1] = cp * sy;
     shadedir[2] = -sp;
+    directed_lum = 0; // ensure fallback path uses default Q2 shading
+    return;
+
+use_grid:
+    // Transform world-space light direction into entity local space
+    shadedir[0] = DotProduct(shadedir_v, glr.entaxis[0]);
+    shadedir[1] = DotProduct(shadedir_v, glr.entaxis[1]);
+    shadedir[2] = DotProduct(shadedir_v, glr.entaxis[2]);
+    dotshading = true;
 }
 
 static inline vec_t shadedot(const vec3_t normal)
 {
     vec_t d = DotProduct(normal, shadedir);
+
+    if (directed_lum > 0)
+        return 1.0f + max(d, 0.0f) * directed_lum;
 
     // matches the anormtab.h precalculations
     if (d < 0)
@@ -363,54 +381,79 @@ static void setup_frame_scale(const model_t *model)
 static void setup_color(void)
 {
     uint64_t flags = glr.ent->flags;
+    vec3_t ambient, directed;
+    vec3_t sample_origin;
     float f, m;
     int i;
 
     memset(&glr.lightpoint, 0, sizeof(glr.lightpoint));
+    VectorClear(directed);
+    directed_lum = 0;
 
     if (flags & RF_SHELL_MASK) {
-        VectorClear(color);
+        VectorClear(ambient);
         if (flags & RF_SHELL_LITE_GREEN)
-            VectorSet(color, 0.56f, 0.93f, 0.56f);
+            VectorSet(ambient, 0.56f, 0.93f, 0.56f);
         if (flags & RF_SHELL_HALF_DAM)
-            VectorSet(color, 0.56f, 0.59f, 0.45f);
+            VectorSet(ambient, 0.56f, 0.59f, 0.45f);
         if (flags & RF_SHELL_DOUBLE) {
-            color[0] = 0.9f;
-            color[1] = 0.7f;
+            ambient[0] = 0.9f;
+            ambient[1] = 0.7f;
         }
-        if (flags & RF_SHELL_RED)
-            color[0] = 1;
-        if (flags & RF_SHELL_GREEN)
-            color[1] = 1;
-        if (flags & RF_SHELL_BLUE)
-            color[2] = 1;
+        if (flags & RF_SHELL_RED) ambient[0] = 1;
+        if (flags & RF_SHELL_GREEN) ambient[1] = 1;
+        if (flags & RF_SHELL_BLUE) ambient[2] = 1;
     } else if (flags & RF_FULLBRIGHT) {
-        VectorSet(color, 1, 1, 1);
+        VectorSet(ambient, 1, 1, 1);
     } else if ((flags & RF_IR_VISIBLE) && (glr.fd.rdflags & RDF_IRGOGGLES)) {
-        VectorSet(color, 1, 0, 0);
+        VectorSet(ambient, 1, 0, 0);
     } else if (flags & RF_TRACKER) {
-        VectorClear(color);
+        VectorClear(ambient);
     } else {
-        GL_LightPoint(origin, color);
+        if (flags & RF_WEAPONMODEL) {
+            // View weapons are drawn in a special space
+            // sample lighting at the eye position
+            VectorCopy(glr.fd.vieworg, sample_origin);
+        } else {
+            const maliasframe_t *frame = &m_model->frames[newframenum];
+            VectorAdd(frame->bounds[0], frame->bounds[1], sample_origin);
+            VectorMA(origin, 0.5f, sample_origin, sample_origin);
+        }
+
+        GL_LightPointExt(sample_origin, ambient, directed, shadedir_v);
 
         if (flags & RF_MINLIGHT) {
-            f = VectorLength(color);
-            if (!f)
-                VectorSet(color, 0.1f, 0.1f, 0.1f);
-            else if (f < 0.1f)
-                VectorScale(color, 0.1f / f, color);
+            f = VectorLength(ambient);
+            if (!f) VectorSet(ambient, 0.1f, 0.1f, 0.1f);
+            else if (f < 0.1f) VectorScale(ambient, 0.1f / f, ambient);
         }
 
         if (flags & RF_GLOW) {
             f = 0.1f * sinf(glr.fd.time * 7);
             for (i = 0; i < 3; i++) {
-                m = color[i] * 0.8f;
-                color[i] += f;
-                if (color[i] < m)
-                    color[i] = m;
+                m = ambient[i] * 0.8f;
+                ambient[i] += f;
+                if (ambient[i] < m) ambient[i] = m;
             }
         }
+
+        float amb_lum = LUMINANCE(ambient[0], ambient[1], ambient[2]);
+        float dir_lum = LUMINANCE(directed[0], directed[1], directed[2]);
+
+        if (amb_lum < 0.01f && dir_lum > 0.01f) {
+            // If in total darkness except for directed light, boost ambient 
+            // slightly to act as a base for the ratio-based shader.
+            VectorSet(ambient, 0.01f, 0.01f, 0.01f);
+            amb_lum = 0.01f;
+        }
+
+        if (amb_lum > 0.001f)
+            directed_lum = dir_lum / amb_lum;
+        else
+            directed_lum = 0;
     }
+
+    VectorCopy(ambient, color);
 
     if (flags & RF_TRANSLUCENT)
         color[3] = glr.ent->alpha;
@@ -1053,10 +1096,12 @@ void GL_DrawAliasModel(const model_t *model)
         VectorCopy(newscale, gls.u_block.mesh.newscale);
         VectorCopy(translate, gls.u_block.mesh.translate);
         VectorCopy(shadedir, gls.u_block.mesh.shadedir);
+        gls.u_block.mesh.shadedir[3] = directed_lum;
         Vector4Copy(color, gls.u_block.mesh.color);
         gls.u_block.mesh.shellscale = shellscale;
         gls.u_block.mesh.backlerp = backlerp;
         gls.u_block.mesh.frontlerp = frontlerp;
+        gls.u_block_dirty = true;
     } else {
         Q_assert(!buffer);
 

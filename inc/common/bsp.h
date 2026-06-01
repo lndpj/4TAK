@@ -207,7 +207,6 @@ typedef struct {
 } lightgrid_node_t;
 
 typedef struct {
-    byte style;
     byte rgb[3];
 } lightgrid_sample_t;
 

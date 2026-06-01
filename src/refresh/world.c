@@ -68,10 +68,11 @@ void GL_SampleLightPoint(vec3_t color)
 
 static bool GL_LightGridPoint(const lightgrid_t *grid, const vec3_t start, vec3_t ambient, vec3_t directed, vec3_t dir)
 {
-    vec3_t point, avg;
-    uint32_t point_i[3];
-    vec3_t samples[8];
+    vec3_t point, amb_avg;
+    int32_t point_i[3];
+    vec3_t amb_samples[8];
     int i, j, mask, numsamples;
+    float style_boost[MAX_LIGHTMAPS];
 
     if (!grid->numleafs || !gl_lightgrid->integer)
         return false;
@@ -80,31 +81,54 @@ static bool GL_LightGridPoint(const lightgrid_t *grid, const vec3_t start, vec3_
     point[1] = (start[1] - grid->mins[1]) * grid->scale[1];
     point[2] = (start[2] - grid->mins[2]) * grid->scale[2];
 
-    VectorCopy(point, point_i);
-    VectorClear(avg);
+    // If the point is outside the grid bounds, unsigned conversion would wrap
+    // and cause a failed lookup. 
+    if (point[0] < 0 || point[1] < 0 || point[2] < 0)
+        return false;
+
+    point_i[0] = (int32_t)floorf(point[0]);
+    point_i[1] = (int32_t)floorf(point[1]);
+    point_i[2] = (int32_t)floorf(point[2]);
+
+    VectorClear(amb_avg);
+
+    // Pre-calculate style intensity with overbright boost (2.0) once per call
+    for (j = 0; j < grid->numstyles; j++) {
+        const lightstyle_t *ls = LIGHT_STYLE(j);
+        style_boost[j] = ls->white * 2.0f;
+    }
+
+    // Prepare clamped indices for the 8 surrounding grid points once
+    uint32_t px[2], py[2], pz[2];
+    px[0] = min((uint32_t)max(point_i[0], 0), grid->size[0] - 1);
+    px[1] = min((uint32_t)max(point_i[0] + 1, 0), grid->size[0] - 1);
+    py[0] = min((uint32_t)max(point_i[1], 0), grid->size[1] - 1);
+    py[1] = min((uint32_t)max(point_i[1] + 1, 0), grid->size[1] - 1);
+    pz[0] = min((uint32_t)max(point_i[2], 0), grid->size[2] - 1);
+    pz[1] = min((uint32_t)max(point_i[2] + 1, 0), grid->size[2] - 1);
 
     for (i = mask = numsamples = 0; i < 8; i++) {
         uint32_t tmp[3];
 
-        tmp[0] = point_i[0] + ((i >> 0) & 1);
-        tmp[1] = point_i[1] + ((i >> 1) & 1);
-        tmp[2] = point_i[2] + ((i >> 2) & 1);
+        tmp[0] = px[(i >> 0) & 1];
+        tmp[1] = py[(i >> 1) & 1];
+        tmp[2] = pz[(i >> 2) & 1];
 
         const lightgrid_sample_t *s = BSP_LookupLightgrid(grid, tmp);
         if (!s)
             continue;
 
-        VectorClear(samples[i]);
+        VectorClear(amb_samples[i]);
 
-        for (j = 0; j < grid->numstyles && s->style != 255; j++, s++) {
-            const lightstyle_t *style = LIGHT_STYLE(s->style);
-            VectorMA(samples[i], style->white, s->rgb, samples[i]);
+        for (j = 0; j < grid->numstyles && s->rgb[0] != 255; j++, s++) {
+            vec3_t rgb = { (float)s->rgb[0], (float)s->rgb[1], (float)s->rgb[2] };
+            VectorMA(amb_samples[i], style_boost[j], rgb, amb_samples[i]);
         }
 
         // count non-occluded samples
         if (j) {
             mask |= BIT(i);
-            VectorAdd(avg, samples[i], avg);
+            VectorAdd(amb_avg, amb_samples[i], amb_avg);
             numsamples++;
         }
     }
@@ -114,64 +138,77 @@ static bool GL_LightGridPoint(const lightgrid_t *grid, const vec3_t start, vec3_
 
     // replace occluded samples with average
     if (mask != 255) {
-        VectorScale(avg, 1.0f / numsamples, avg);
+        VectorScale(amb_avg, 1.0f / numsamples, amb_avg);
         for (i = 0; i < 8; i++)
-            if (!(mask & BIT(i)))
-                VectorCopy(avg, samples[i]);
+            if (!(mask & BIT(i))) {
+                VectorCopy(amb_avg, amb_samples[i]);
+            }
     }
 
     // trilinear interpolation
     float fx, fy, fz;
-    float bx, by, bz;
-    vec3_t lerp_x[4];
-    vec3_t lerp_y[2];
+    vec3_t amb_lerp_x[4], amb_lerp_y[2], final_amb;
 
     fx = point[0] - point_i[0];
     fy = point[1] - point_i[1];
     fz = point[2] - point_i[2];
 
-    bx = 1.0f - fx;
-    by = 1.0f - fy;
-    bz = 1.0f - fz;
+    // Use smoothstep-based weights for trilinear interpolation to ensure C1 continuity.
+    // This provides smoother transitions for both intensity and direction at boundaries.
+    float sx = fx * fx * (3.0f - 2.0f * fx);
+    float sy = fy * fy * (3.0f - 2.0f * fy);
+    float sz = fz * fz * (3.0f - 2.0f * fz);
+    float bsx = 1.0f - sx, bsy = 1.0f - sy, bsz = 1.0f - sz;
 
-    LerpVector2(samples[0], samples[1], bx, fx, lerp_x[0]);
-    LerpVector2(samples[2], samples[3], bx, fx, lerp_x[1]);
-    LerpVector2(samples[4], samples[5], bx, fx, lerp_x[2]);
-    LerpVector2(samples[6], samples[7], bx, fx, lerp_x[3]);
-
-    LerpVector2(lerp_x[0], lerp_x[1], by, fy, lerp_y[0]);
-    LerpVector2(lerp_x[2], lerp_x[3], by, fy, lerp_y[1]);
-
-    vec3_t color;
-    LerpVector2(lerp_y[0], lerp_y[1], bz, fz, color);
+    LerpVector2(amb_samples[0], amb_samples[1], bsx, sx, amb_lerp_x[0]);
+    LerpVector2(amb_samples[2], amb_samples[3], bsx, sx, amb_lerp_x[1]);
+    LerpVector2(amb_samples[4], amb_samples[5], bsx, sx, amb_lerp_x[2]);
+    LerpVector2(amb_samples[6], amb_samples[7], bsx, sx, amb_lerp_x[3]);
+    LerpVector2(amb_lerp_x[0], amb_lerp_x[1], bsy, sy, amb_lerp_y[0]);
+    LerpVector2(amb_lerp_x[2], amb_lerp_x[3], bsy, sy, amb_lerp_y[1]);
+    LerpVector2(amb_lerp_y[0], amb_lerp_y[1], bsz, sz, final_amb);
 
     if (directed && dir) {
-        vec3_t g;
+        // Determine direction via weighted average of points near the model.
+        // We use the derivative of the smoothed trilinear interpolant for a continuous direction field.
         float l[8];
+        vec3_t g, color;
 
         for (i = 0; i < 8; i++)
-            l[i] = LUMINANCE(samples[i][0], samples[i][1], samples[i][2]);
+            l[i] = LUMINANCE(amb_samples[i][0], amb_samples[i][1], amb_samples[i][2]);
 
-        g[0] = (l[1] + l[3] + l[5] + l[7]) - (l[0] + l[2] + l[4] + l[6]);
-        g[1] = (l[2] + l[3] + l[6] + l[7]) - (l[0] + l[1] + l[4] + l[5]);
-        g[2] = (l[4] + l[5] + l[6] + l[7]) - (l[0] + l[1] + l[2] + l[3]);
+        VectorCopy(final_amb, color);
 
-        float mag = VectorNormalize(g);
-        if (mag > 0.001f) {
-            VectorCopy(g, dir);
-            // Split color into 40% ambient, 60% directed to provide shape
-            VectorScale(color, 0.4f, ambient);
-            VectorScale(color, 0.6f, directed);
-        } else {
-            VectorCopy(color, ambient);
-            VectorClear(directed);
-            VectorSet(dir, 0, 0, 1);
-        }
+        // Scale derivatives by 6t(1-t)
+        float dsx = 6.0f * fx * (1.0f - fx);
+        float dsy = 6.0f * fy * (1.0f - fy);
+        float dsz = 6.0f * fz * (1.0f - fz);
+
+        g[0] = (((l[1] - l[0]) * bsy + (l[3] - l[2]) * sy) * bsz + ((l[5] - l[4]) * bsy + (l[7] - l[6]) * sy) * sz) * dsx;
+        g[1] = (((l[2] - l[0]) * bsx + (l[3] - l[1]) * sx) * bsz + ((l[6] - l[4]) * bsx + (l[7] - l[5]) * sx) * sz) * dsy;
+        g[2] = (((l[4] - l[0]) * bsx + (l[5] - l[1]) * sx) * bsy + ((l[6] - l[2]) * bsx + (l[7] - l[3]) * sx) * sy) * dsz;
+
+        // Smoothly transition between gradient-based direction and tilted fallback
+        // to prevent "popping" when magnitude threshold is crossed.
+        vec3_t fallback = { 0.577f, 0.707f, 0.577f };
+        float mag = sqrtf(DotProduct(g, g));
+        float factor = Q_clipf(mag * 200.0f, 0.0f, 1.0f); // Soft transition range
+
+        LerpVector(fallback, g, factor, dir);
+        VectorNormalize(dir);
+
+        // Mix and normalize ambient/directed based on gradient strength (factor)
+        float w_amb = 0.4f - 0.15f * factor; // Keep ambient as is
+        float w_dir = (0.6f + 0.15f * factor) * 3.0f; // Increase directional multiplier
+        float f_inv = 1.0f / (w_amb + w_dir);
+
+        VectorScale(color, w_amb * f_inv, ambient);
+        VectorScale(color, w_dir * f_inv, directed);
 
         GL_AdjustColor(ambient);
         GL_AdjustColor(directed);
     } else {
-        VectorCopy(color, ambient);
+        VectorCopy(final_amb, ambient);
         GL_AdjustColor(ambient);
     }
 
@@ -245,11 +282,27 @@ static bool GL_LightPoint_(const vec3_t start, vec3_t ambient, vec3_t directed, 
 
     if (directed && dir) {
         // lightmap based fallback - use surface normal for direction
-        VectorScale(color, 0.8f, ambient);
-        VectorScale(color, 0.2f, directed);
-        VectorCopy(glr.lightpoint.plane.normal, dir);
-        if (glr.lightpoint.surf->drawflags & DSURF_PLANEBACK)
-            VectorInverse(dir);
+        // Use more punchy split for better contrast
+        float w_amb = 0.4f; // Keep ambient as is
+        float w_dir = 1.8f; // Increase directional multiplier (1.5x original 1.2)
+        float f_inv = 1.0f / (w_amb + w_dir);
+
+        VectorScale(color, w_amb * f_inv, ambient);
+        VectorScale(color, w_dir * f_inv, directed);
+        
+        // Fallback light direction when lightgrid is not available
+        vec3_t default_tilted_light = { 0.577f, 0.707f, 0.577f }; // A general overhead light with a slight tilt
+        
+        // If the surface normal is mostly vertical, blend it with a tilted default light
+        // to ensure some horizontal component for yaw rotation to affect.
+        if (fabsf(glr.lightpoint.plane.normal[2]) > 0.9f) { // If normal is mostly Z-axis
+            LerpVector(default_tilted_light, glr.lightpoint.plane.normal, 0.5f, dir); // Blend 50/50
+            VectorNormalize(dir);
+        } else {
+            VectorCopy(glr.lightpoint.plane.normal, dir);
+            if (glr.lightpoint.surf->drawflags & DSURF_PLANEBACK)
+                VectorInverse(dir);
+        }
 
         GL_AdjustColor(ambient);
         GL_AdjustColor(directed);
@@ -322,19 +375,36 @@ static void GL_TransformLights(const mmodel_t *model)
     }
 }
 
-static void GL_AddLights(const vec3_t origin, vec3_t color)
+static void GL_AddLightsExt(const vec3_t origin, vec3_t ambient, vec3_t directed, vec3_t dir)
 {
+    vec3_t light_dir;
     dlight_t *light;
-    vec_t f;
+    float f, intensity;
     int i;
 
     for (i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++) {
         f = light->radius - DLIGHT_CUTOFF - Distance(light->origin, origin);
         if (f > 0) {
             f *= (1.0f / 255);
-            VectorMA(color, f * light->intensity, light->color, color);
+            intensity = f * light->intensity;
+
+            if (directed && dir) {
+                VectorSubtract(light->origin, origin, light_dir);
+                if (VectorNormalize(light_dir) > 0.001f) {
+                    // Pull the light direction towards the dynamic source
+                    VectorMA(dir, intensity * 0.5f, light_dir, dir);
+                }
+                // Distribute dynamic light between ambient and directed for better shape
+                VectorMA(ambient,  intensity * 0.4f, light->color, ambient);
+                VectorMA(directed, intensity * 1.8f, light->color, directed); // Increase dynamic directional multiplier
+            } else {
+                VectorMA(ambient, intensity, light->color, ambient);
+            }
         }
     }
+
+    if (dir)
+        VectorNormalize(dir);
 }
 
 void GL_LightPoint(const vec3_t origin, vec3_t color)
@@ -350,7 +420,7 @@ void GL_LightPoint(const vec3_t origin, vec3_t color)
 
     // add dynamic lights
     if (!gl_backend->use_per_pixel_lighting())
-        GL_AddLights(origin, color);
+        GL_AddLightsExt(origin, color, NULL, NULL);
 }
 
 void GL_LightPointExt(const vec3_t origin, vec3_t ambient, vec3_t directed, vec3_t dir)
@@ -368,8 +438,32 @@ void GL_LightPointExt(const vec3_t origin, vec3_t ambient, vec3_t directed, vec3
         VectorSet(dir, 0, 0, 1);
     }
 
+    // Smooth lighting transitions for entities (0.1s duration)
+    if (glr.ent && glr.ent != &gl_world) {
+        if (glr.ent->light_frame == glr.drawframe - 1) {
+            float f = glr.fd.frametime / 0.1f;
+            if (f > 1.0f) f = 1.0f;
+
+            LerpVector(glr.ent->light_ambient, ambient, f, ambient);
+            LerpVector(glr.ent->light_directed, directed, f, directed);
+            if (dir) {
+                // If previous direction was invalid/zero, skip direction lerp to avoid noise
+                if (DotProduct(glr.ent->light_dir, glr.ent->light_dir) < 0.001f) {
+                    VectorCopy(dir, glr.ent->light_dir);
+                }
+
+                LerpVector(glr.ent->light_dir, dir, f, dir);
+                VectorNormalize(dir);
+            }
+        }
+        VectorCopy(ambient, glr.ent->light_ambient);
+        VectorCopy(directed, glr.ent->light_directed);
+        if (dir) VectorCopy(dir, glr.ent->light_dir);
+        glr.ent->light_frame = glr.drawframe;
+    }
+
     if (!gl_backend->use_per_pixel_lighting())
-        GL_AddLights(origin, ambient);
+        GL_AddLightsExt(origin, ambient, directed, dir);
 }
 
 void R_LightPoint(const vec3_t origin, vec3_t color)
