@@ -604,6 +604,17 @@ static void GL_DrawEntities(entity_t *ent)
             continue;
         }
 
+        if (model->type == MOD_ALIAS) {
+            vec3_t ambient, directed, lightdir;
+            GL_LightPointExt(ent->origin, ambient, directed, lightdir);
+            VectorCopy(ambient, gls.u_block.mesh.color);
+            gls.u_block.mesh.color[3] = (ent->flags & RF_TRANSLUCENT) ? ent->alpha : 1.0f;
+            VectorCopy(lightdir, gls.u_block.mesh.shadedir);
+            // Store the magnitude of the directed light to scale the shading in the fragment shader
+            gls.u_block.mesh.shadedir[3] = LUMINANCE(directed[0], directed[1], directed[2]);
+            gls.u_block_dirty = true;
+        }
+
         switch (model->type) {
         case MOD_ALIAS:
             GL_DrawAliasModel(model);

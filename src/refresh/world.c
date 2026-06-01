@@ -66,7 +66,7 @@ void GL_SampleLightPoint(vec3_t color)
     }
 }
 
-static bool GL_LightGridPoint(const lightgrid_t *grid, const vec3_t start, vec3_t color)
+static bool GL_LightGridPoint(const lightgrid_t *grid, const vec3_t start, vec3_t ambient, vec3_t directed, vec3_t dir)
 {
     vec3_t point, avg;
     uint32_t point_i[3];
@@ -142,16 +142,46 @@ static bool GL_LightGridPoint(const lightgrid_t *grid, const vec3_t start, vec3_
     LerpVector2(lerp_x[0], lerp_x[1], by, fy, lerp_y[0]);
     LerpVector2(lerp_x[2], lerp_x[3], by, fy, lerp_y[1]);
 
+    vec3_t color;
     LerpVector2(lerp_y[0], lerp_y[1], bz, fz, color);
 
-    GL_AdjustColor(color);
+    if (directed && dir) {
+        vec3_t g;
+        float l[8];
+
+        for (i = 0; i < 8; i++)
+            l[i] = LUMINANCE(samples[i][0], samples[i][1], samples[i][2]);
+
+        g[0] = (l[1] + l[3] + l[5] + l[7]) - (l[0] + l[2] + l[4] + l[6]);
+        g[1] = (l[2] + l[3] + l[6] + l[7]) - (l[0] + l[1] + l[4] + l[5]);
+        g[2] = (l[4] + l[5] + l[6] + l[7]) - (l[0] + l[1] + l[2] + l[3]);
+
+        float mag = VectorNormalize(g);
+        if (mag > 0.001f) {
+            VectorCopy(g, dir);
+            // Split color into 40% ambient, 60% directed to provide shape
+            VectorScale(color, 0.4f, ambient);
+            VectorScale(color, 0.6f, directed);
+        } else {
+            VectorCopy(color, ambient);
+            VectorClear(directed);
+            VectorSet(dir, 0, 0, 1);
+        }
+
+        GL_AdjustColor(ambient);
+        GL_AdjustColor(directed);
+    } else {
+        VectorCopy(color, ambient);
+        GL_AdjustColor(ambient);
+    }
 
     return true;
 }
 
-static bool GL_LightPoint_(const vec3_t start, vec3_t color)
+static bool GL_LightPoint_(const vec3_t start, vec3_t ambient, vec3_t directed, vec3_t dir)
 {
     const bsp_t     *bsp = gl_static.world.cache;
+    vec3_t          color;
     int             index;
     lightpoint_t    pt;
     vec3_t          end, mins, maxs;
@@ -205,7 +235,7 @@ static bool GL_LightPoint_(const vec3_t start, vec3_t color)
 
     LerpVector(start, end, glr.lightpoint.fraction, glr.lightpoint.pos);
 
-    if (GL_LightGridPoint(&bsp->lightgrid, start, color))
+    if (GL_LightGridPoint(&bsp->lightgrid, start, ambient, directed, dir))
         return true;
 
     if (!glr.lightpoint.surf)
@@ -213,7 +243,20 @@ static bool GL_LightPoint_(const vec3_t start, vec3_t color)
 
     GL_SampleLightPoint(color);
 
-    GL_AdjustColor(color);
+    if (directed && dir) {
+        // lightmap based fallback - use surface normal for direction
+        VectorScale(color, 0.8f, ambient);
+        VectorScale(color, 0.2f, directed);
+        VectorCopy(glr.lightpoint.plane.normal, dir);
+        if (glr.lightpoint.surf->drawflags & DSURF_PLANEBACK)
+            VectorInverse(dir);
+
+        GL_AdjustColor(ambient);
+        GL_AdjustColor(directed);
+    } else {
+        VectorCopy(color, ambient);
+        GL_AdjustColor(ambient);
+    }
 
     return true;
 }
@@ -302,12 +345,31 @@ void GL_LightPoint(const vec3_t origin, vec3_t color)
     }
 
     // get lighting from world
-    if (!GL_LightPoint_(origin, color))
+    if (!GL_LightPoint_(origin, color, NULL, NULL))
         VectorSet(color, 1, 1, 1);
 
     // add dynamic lights
     if (!gl_backend->use_per_pixel_lighting())
         GL_AddLights(origin, color);
+}
+
+void GL_LightPointExt(const vec3_t origin, vec3_t ambient, vec3_t directed, vec3_t dir)
+{
+    if (gl_fullbright->integer) {
+        VectorSet(ambient, 1, 1, 1);
+        VectorClear(directed);
+        VectorSet(dir, 0, 0, 1);
+        return;
+    }
+
+    if (!GL_LightPoint_(origin, ambient, directed, dir)) {
+        VectorSet(ambient, 1, 1, 1);
+        VectorClear(directed);
+        VectorSet(dir, 0, 0, 1);
+    }
+
+    if (!gl_backend->use_per_pixel_lighting())
+        GL_AddLights(origin, ambient);
 }
 
 void R_LightPoint(const vec3_t origin, vec3_t color)

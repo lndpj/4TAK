@@ -1907,7 +1907,7 @@ int FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag)
     file_t *file;
     qhandle_t f;
     byte *buf;
-    int32_t len;
+    int64_t len;
     int read;
 
     Q_assert(path);
@@ -1935,7 +1935,7 @@ int FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag)
     // look for it in the filesystem or pack files
     len = expand_open_file_read(file, path);
     if (len < 0) {
-        return len;
+        return (int32_t)len;
     }
 
     // sanity check file size
@@ -1970,7 +1970,7 @@ int FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag)
 
 done:
     FS_CloseFile(f);
-    return len;
+    return (int32_t)len;
 }
 
 static int write_and_close(const void *data, size_t len, qhandle_t f)

@@ -84,7 +84,7 @@ static void write_block(sizebuf_t *buf, glStateBits_t bits)
             vec3 u_old_scale;
             vec3 u_new_scale;
             vec3 u_translate;
-            vec3 u_shadedir;
+            vec4 u_shadedir;
             vec4 u_color;
             vec4 pad_0;
             float pad_1;
@@ -187,10 +187,11 @@ static void write_shadedot(sizebuf_t *buf)
 {
     GLSL(
         float shadedot(vec3 normal) {
-            float d = dot(normal, u_shadedir);
-            if (d < 0.0)
-                d *= 0.3;
-            return d + 1.0;
+            float d = dot(normal, u_shadedir.xyz);
+            // u_shadedir.w contains the luminance of the directed light component.
+            // We apply it as a boost over the base ambient color (u_color).
+            // A value of 1.0 represents the standard "half-lambert" style base.
+            return 1.0 + max(d, 0.0) * u_shadedir.w;
         }
     )
 }

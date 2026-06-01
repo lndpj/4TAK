@@ -1001,6 +1001,7 @@ void GL_ClearSolidFaces(void);
 void GL_DrawBspModel(mmodel_t *model);
 void GL_DrawWorld(void);
 void GL_SampleLightPoint(vec3_t color);
+void GL_LightPointExt(const vec3_t origin, vec3_t ambient, vec3_t directed, vec3_t dir);
 void GL_LightPoint(const vec3_t origin, vec3_t color);
 
 /*
