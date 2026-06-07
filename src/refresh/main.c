@@ -45,6 +45,8 @@ cvar_t *gl_modulate;
 cvar_t *gl_modulate_world;
 cvar_t *gl_coloredlightmaps;
 cvar_t *gl_lightmap_bits;
+cvar_t *gl_lightmap_upscale;
+cvar_t *gl_lightmap_blur;
 cvar_t *gl_brightness;
 cvar_t *gl_dynamic;
 cvar_t *gl_dlight_falloff;
@@ -1089,6 +1091,20 @@ static void gl_clearcolor_changed(cvar_t *self)
         qglClearColor(Vector4Unpack(gl_static.clearcolor));
 }
 
+static void gl_lightmap_upscale_g(genctx_t *gen)
+{
+    Prompt_AddMatch(gen, "1");
+    Prompt_AddMatch(gen, "2");
+    Prompt_AddMatch(gen, "4");
+}
+
+static void gl_lightmap_blur_g(genctx_t *gen)
+{
+    Prompt_AddMatch(gen, "0");
+    Prompt_AddMatch(gen, "1");
+    Prompt_AddMatch(gen, "2");
+}
+
 static void GL_Register(void)
 {
     // regular variables
@@ -1106,6 +1122,10 @@ static void GL_Register(void)
     gl_coloredlightmaps->changed = gl_lightmap_changed;
     gl_lightmap_bits = Cvar_Get("gl_lightmap_bits", "0", 0);
     gl_lightmap_bits->changed = gl_lightmap_changed;
+    gl_lightmap_upscale = Cvar_Get("gl_lightmap_upscale", "2", CVAR_REFRESH);
+    gl_lightmap_upscale->generator = gl_lightmap_upscale_g;
+    gl_lightmap_blur = Cvar_Get("gl_lightmap_blur", "1", CVAR_REFRESH);
+    gl_lightmap_blur->generator = gl_lightmap_blur_g;
     gl_brightness = Cvar_Get("gl_brightness", "0", 0);
     gl_brightness->changed = gl_lightmap_changed;
     gl_dynamic = Cvar_Get("gl_dynamic", "1", 0);

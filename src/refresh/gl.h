@@ -253,6 +253,8 @@ extern cvar_t *gl_modulate;
 extern cvar_t *gl_modulate_world;
 extern cvar_t *gl_coloredlightmaps;
 extern cvar_t *gl_lightmap_bits;
+extern cvar_t *gl_lightmap_upscale;
+extern cvar_t *gl_lightmap_blur;
 extern cvar_t *gl_brightness;
 extern cvar_t *gl_dynamic;
 extern cvar_t *gl_dlight_falloff;

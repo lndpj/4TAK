@@ -179,6 +179,8 @@ static void BSP_PrintStats(const bsp_t *bsp)
 #if USE_REF
         if (bsp->lm_decoupled)
             Com_Printf(" DECOUPLED_LM");
+        if (bsp->normals.num_normals)
+            Com_Printf(" BSP_NORMALS");
         if (grid->numleafs)
             Com_Printf(" LIGHTGRID_OCTREE");
 #endif

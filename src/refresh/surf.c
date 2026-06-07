@@ -23,8 +23,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "gl.h"
 #include "common/mdfour.h"
 
+extern cvar_t *gl_lightmap_upscale;
+extern cvar_t *gl_lightmap_blur;
+
 lightmap_builder_t lm;
-static byte lm_buffer[0x4000000];
+static byte lm_buffer[0x8000000];        // Source atlas (unblurred)
 
 /*
 =============================================================================
@@ -99,11 +102,50 @@ DYNAMIC BLOCKLIGHTS
 #define LM_PIXELS(map, s, t)    ((map)->buffer + ((t) << lm.block_shift) + ((s) << 2))
 
 static float blocklights[MAX_BLOCKLIGHTS * 3];
+static uint32_t *upscale_src = NULL;
+static uint32_t *upscale_dst = NULL;
+static uint32_t *upscale_blur = NULL;
+
+static void LM_BlurSurface(uint32_t *pixels, int w, int h)
+{
+    if (!upscale_blur)
+        upscale_blur = R_Malloc(MAX_LIGHTMAP_EXTENTS * 4 * MAX_LIGHTMAP_EXTENTS * 4 * sizeof(uint32_t));
+
+    memcpy(upscale_blur, pixels, w * h * sizeof(uint32_t));
+
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            int r = 0, g = 0, b = 0;
+            int count = 0;
+
+            for (int dy = -1; dy <= 1; dy++) {
+                int ny = y + dy;
+                if (ny < 0 || ny >= h) continue;
+
+                for (int dx = -1; dx <= 1; dx++) {
+                    int nx = x + dx;
+                    if (nx < 0 || nx >= w) continue;
+
+                    color_t p;
+                    p.u32 = upscale_blur[ny * w + nx];
+                    r += p.r; g += p.g; b += p.b;
+                    count++;
+                }
+            }
+
+            color_t res = { .r = r / count, .g = g / count, .b = b / count, .a = 255 };
+            pixels[y * w + x] = res.u32;
+        }
+    }
+}
 
 static void put_blocklights(const mface_t *surf)
 {
     float add, modulate, scale = lm.scale;
     int i, j, smax, tmax, stride = 1 << lm.block_shift;
+    int upscale = Cvar_ClampInteger(gl_lightmap_upscale, 1, 4);
+    if (upscale == 3) upscale = 2; // Only 1, 2, 4 are supported
+
     const float *bl;
     byte *out;
 
@@ -120,15 +162,46 @@ static void put_blocklights(const mface_t *surf)
 
     out = LM_PIXELS(surf->light_m, surf->light_s, surf->light_t);
 
-    for (i = 0, bl = blocklights; i < tmax; i++, out += stride) {
-        byte *dst;
-        for (j = 0, dst = out; j < smax; j++, bl += 3, dst += 4) {
-            vec3_t tmp;
-            adjust_color_f(tmp, bl, add, modulate, scale, true);
-            dst[0] = (byte)tmp[0];
-            dst[1] = (byte)tmp[1];
-            dst[2] = (byte)tmp[2];
-            dst[3] = 255;
+    if (upscale > 1) {
+        if (!upscale_src) {
+            upscale_src = R_Malloc(MAX_LIGHTMAP_EXTENTS * MAX_LIGHTMAP_EXTENTS * sizeof(uint32_t));
+            upscale_dst = R_Malloc(MAX_LIGHTMAP_EXTENTS * 4 * MAX_LIGHTMAP_EXTENTS * 4 * sizeof(uint32_t));
+        }
+
+        for (i = 0, bl = blocklights; i < tmax; i++) {
+            for (j = 0; j < smax; j++, bl += 3) {
+                vec3_t tmp;
+                adjust_color_f(tmp, bl, add, modulate, scale, true);
+                upscale_src[i * smax + j] = COLOR_RGBA(tmp[0], tmp[1], tmp[2], 255).u32;
+            }
+        }
+
+        if (upscale == 2)
+            HQ2x_Render(upscale_dst, upscale_src, smax, tmax);
+        else if (upscale == 4)
+            HQ4x_Render(upscale_dst, upscale_src, smax, tmax);
+
+        int blur_passes = Cvar_ClampInteger(gl_lightmap_blur, 0, 10);
+        while (blur_passes--) {
+            LM_BlurSurface(upscale_dst, smax * upscale, tmax * upscale);
+        }
+
+        int usmax = smax * upscale;
+        int utmax = tmax * upscale;
+        for (i = 0; i < utmax; i++, out += stride) {
+            memcpy(out, &upscale_dst[i * usmax], usmax * 4);
+        }
+    } else {
+        for (i = 0, bl = blocklights; i < tmax; i++, out += stride) {
+            byte *dst;
+            for (j = 0, dst = out; j < smax; j++, bl += 3, dst += 4) {
+                vec3_t tmp;
+                adjust_color_f(tmp, bl, add, modulate, scale, true);
+                dst[0] = (byte)tmp[0];
+                dst[1] = (byte)tmp[1];
+                dst[2] = (byte)tmp[2];
+                dst[3] = 255;
+            }
         }
     }
 }
@@ -234,7 +307,10 @@ static void add_light_styles(mface_t *surf)
 
 static void update_dynamic_lightmap(mface_t *surf)
 {
-    int s0, t0, s1, t1;
+    int s0, t0, s1, t1, upscale;
+
+    upscale = Cvar_ClampInteger(gl_lightmap_upscale, 1, 4);
+    if (upscale == 3) upscale = 2;
 
     // add all the lightmaps
     add_light_styles(surf);
@@ -252,8 +328,8 @@ static void update_dynamic_lightmap(mface_t *surf)
     s0 = surf->light_s;
     t0 = surf->light_t;
 
-    s1 = s0 + surf->lm_width;
-    t1 = t0 + surf->lm_height;
+    s1 = s0 + surf->lm_width * upscale;
+    t1 = t0 + surf->lm_height * upscale;
 
     lightmap_t *m = surf->light_m;
 
@@ -303,6 +379,7 @@ void GL_UploadLightmaps(void)
     lightmap_t *m;
     bool set = false;
     int i;
+    int blur_passes = Cvar_ClampInteger(gl_lightmap_blur, 0, 10);
 
     for (i = 0, m = lm.lightmaps; i < lm.nummaps; i++, m++) {
         int x, y, w, h;
@@ -361,6 +438,7 @@ static void LM_UploadBlock(void)
     Q_assert(lm.nummaps < lm.maxmaps);
 
     lightmap_t *m = &lm.lightmaps[lm.nummaps];
+
     clear_dirty_region(m);
 
     GL_ForceTexture(TMU_LIGHTMAP, lm.texnums[lm.nummaps]);
@@ -468,12 +546,14 @@ static void build_primary_lightmap(mface_t *surf)
 static void LM_BuildSurface(mface_t *surf)
 {
     int smax, tmax, s, t;
+    int upscale = Cvar_ClampInteger(gl_lightmap_upscale, 1, 4);
+    if (upscale == 3) upscale = 2;
 
     if (lm.nummaps >= lm.maxmaps)
         return;     // can't have any more
 
-    smax = surf->lm_width;
-    tmax = surf->lm_height;
+    smax = surf->lm_width * upscale;
+    tmax = surf->lm_height * upscale;
 
     if (!LM_AllocBlock(smax, tmax, &s, &t)) {
         LM_UploadBlock();
@@ -763,11 +843,15 @@ static void normalize_surface_lmtc(const mface_t *surf, vec_t *vbo)
 {
     float s, t, scale = 1.0f / lm.block_size;
     int i;
+    int upscale = Cvar_ClampInteger(gl_lightmap_upscale, 1, 4);
+    if (upscale == 3) upscale = 2;
 
     s = surf->light_s + 0.5f;
     t = surf->light_t + 0.5f;
 
     for (i = 0; i < surf->numsurfedges; i++) {
+        vbo[6] *= upscale;
+        vbo[7] *= upscale;
         vbo[6] += s;
         vbo[7] += t;
         vbo[6] *= scale;

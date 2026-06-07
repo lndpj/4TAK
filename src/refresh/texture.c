@@ -1290,7 +1290,7 @@ void GL_InitImages(void)
 
     IMG_GetPalette();
 
-    if (gl_upscale_pcx->integer)
+    if (gl_upscale_pcx->integer || gl_lightmap_upscale->integer > 1)
         HQ2x_Init();
 
     GL_BuildIntensityTable();
