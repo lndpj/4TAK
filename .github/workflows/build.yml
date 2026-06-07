@@ -76,6 +76,18 @@ jobs:
       - name: Build - meson compile
         run: |
           meson compile -C builddir
+          meson install -C builddir --tags runtime --destdir ${{ github.workspace }}/installdir
+
+      - name: Setup variables
+        uses: actions/github-script@v7
+        with:
+          script: core.exportVariable('GITHUB_SHA_SHORT', context.sha.substring(0, 7))
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: 4TAK-windows-mingw-${{ matrix.arch }}-${{env.GITHUB_SHA_SHORT}}
+          path: installdir/
 
   msvc:
     runs-on: windows-latest
@@ -113,6 +125,7 @@ jobs:
         run: |
           meson compile -C builddir
           meson install -C builddir --tags runtime --destdir ${{ github.workspace }}/installdir
+          copy builddir\*.pdb installdir\
 
       - name: Setup variables
         uses: actions/github-script@v7
@@ -122,7 +135,7 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: q2pro-rr-windows-${{ matrix.arch }}-${{env.GITHUB_SHA_SHORT}}
+          name: 4TAK-windows-${{ matrix.arch }}-${{env.GITHUB_SHA_SHORT}}
           path: installdir/
 
   linux:
@@ -171,7 +184,31 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: q2pro-rr-linux-${{ matrix.cc }}-x86_64-${{env.GITHUB_SHA_SHORT}}
+          name: 4TAK-macos-arm64-${{env.GITHUB_SHA_SHORT}}
+          path: installdir/
+          meson install -C builddir --tags runtime --destdir ${{ github.workspace }}/installdir
+
+      - name: Setup variables
+        uses: actions/github-script@v7
+        with:
+          script: core.exportVariable('GITHUB_SHA_SHORT', context.sha.substring(0, 7))
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: 4TAK-macos-arm64-${{env.GITHUB_SHA_SHORT}}
+          path: installdir/
+          meson install -C builddir --tags runtime --destdir ${{ github.workspace }}/installdir
+
+      - name: Setup variables
+        uses: actions/github-script@v7
+        with:
+          script: core.exportVariable('GITHUB_SHA_SHORT', context.sha.substring(0, 7))
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: 4TAK-linux-${{ matrix.cc }}-x86_64-${{env.GITHUB_SHA_SHORT}}
           path: installdir/
 
   macos:
