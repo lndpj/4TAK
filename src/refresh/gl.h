@@ -56,7 +56,7 @@ typedef uint64_t glStateBits_t;
 #define TAB_COS(x)  gl_static.sintab[((x) + 64) & 255]
 
 // auto textures
-#define NUM_AUTO_TEXTURES       13
+#define NUM_AUTO_TEXTURES       14
 #define AUTO_TEX(n)             gl_static.texnums[n]
 
 #define TEXNUM_DEFAULT          AUTO_TEX(0)
@@ -72,12 +72,14 @@ typedef uint64_t glStateBits_t;
 #define TEXNUM_PP_BLOOM         AUTO_TEX(10)
 #define TEXNUM_PP_BLUR_0        AUTO_TEX(11)
 #define TEXNUM_PP_BLUR_1        AUTO_TEX(12)
+#define TEXNUM_PP_SHADOWMAP     AUTO_TEX(13)
 
 // framebuffers
-#define FBO_COUNT   3
+#define FBO_COUNT   4
 #define FBO_SCENE   gl_static.framebuffers[0]
 #define FBO_BLUR_0  gl_static.framebuffers[1]
 #define FBO_BLUR_1  gl_static.framebuffers[2]
+#define FBO_SHADOWMAP gl_static.framebuffers[3]
 
 typedef struct {
     GLuint query;
@@ -576,6 +578,7 @@ void GL_LoadWorld(const char *name);
 #define GLS_BLUR_BOX            BIT_ULL(33)
 
 #define GLS_DYNAMIC_LIGHTS      BIT_ULL(34)
+#define GLS_SHADOW_PASS         BIT_ULL(35)
 
 #define GLS_BLEND_MASK          (GLS_BLEND_BLEND | GLS_BLEND_ADD | GLS_BLEND_MODULATE)
 #define GLS_COMMON_MASK         (GLS_DEPTHMASK_FALSE | GLS_DEPTHTEST_DISABLE | GLS_CULL_DISABLE | GLS_BLEND_MASK)
@@ -587,7 +590,7 @@ void GL_LoadWorld(const char *name);
 #define GLS_BLUR_MASK           (GLS_BLUR_GAUSS | GLS_BLUR_BOX)
 #define GLS_SHADER_MASK         (GLS_ALPHATEST_ENABLE | GLS_TEXTURE_REPLACE | GLS_SCROLL_ENABLE | \
                                  GLS_LIGHTMAP_ENABLE | GLS_WARP_ENABLE | GLS_INTENSITY_ENABLE | \
-                                 GLS_GLOWMAP_ENABLE | GLS_SKY_MASK | GLS_DEFAULT_FLARE | GLS_MESH_MASK | \
+                                 GLS_GLOWMAP_ENABLE | GLS_SKY_MASK | GLS_DEFAULT_FLARE | GLS_MESH_MASK | GLS_SHADOW_PASS | \
                                  GLS_FOG_MASK | GLS_BLOOM_MASK | GLS_BLUR_MASK | GLS_DYNAMIC_LIGHTS)
 #define GLS_UNIFORM_MASK        (GLS_WARP_ENABLE | GLS_LIGHTMAP_ENABLE | GLS_INTENSITY_ENABLE | \
                                  GLS_SKY_MASK | GLS_FOG_MASK | GLS_BLUR_MASK | GLS_DYNAMIC_LIGHTS)
@@ -651,6 +654,7 @@ typedef enum {
     TMU_TEXTURE,
     TMU_LIGHTMAP,
     TMU_GLOWMAP,
+    TMU_SHADOWMAP,
     MAX_TMUS,
 
     // MD5
@@ -697,6 +701,7 @@ typedef struct {
     mat4_t     m_model;
     mat4_t     m_view;
     mat4_t     m_proj;
+    mat4_t     m_shadow;
     union {
         mat4_t          m_sky[2];
         glMeshBlock_t   mesh;

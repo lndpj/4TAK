@@ -77,6 +77,7 @@ static void write_block(sizebuf_t *buf, glStateBits_t bits)
         mat4 m_model;
         mat4 m_view;
         mat4 m_proj;
+        mat4 m_shadow;
     );
 
     if (bits & GLS_MESH_ANY) {
@@ -341,6 +342,13 @@ static void write_mesh_shader(sizebuf_t *buf, glStateBits_t bits)
     if (bits & GLS_MESH_SHADE)
         write_shadedot(buf);
 
+    if (bits & GLS_SHADOW_PASS) {
+        GLSF("void main() {\n");
+        GLSL(gl_Position = m_proj * m_view * m_model * vec4(vec3(a_new_pos.xyz) * u_new_scale + u_translate, 1.0);)
+        GLSF("}\n");
+        return;
+    }
+
     GLSF("void main() {\n");
     GLSL(v_tc = a_tc;)
 
@@ -393,6 +401,13 @@ static void write_vertex_shader(sizebuf_t *buf, glStateBits_t bits)
 {
     write_header(buf, bits);
     write_block(buf, bits);
+
+    if (bits & GLS_SHADOW_PASS) {
+        GLSF("void main() {\n");
+        GLSL(gl_Position = m_proj * m_view * m_model * a_pos;)
+        GLSF("}\n");
+        return;
+    }
 
 #if USE_MD5
     if (bits & GLS_MESH_MD5) {
@@ -625,6 +640,11 @@ static void write_fragment_shader(sizebuf_t *buf, glStateBits_t bits)
         write_gaussian_blur(buf);
     else if (bits & GLS_BLUR_BOX)
         write_box_blur(buf);
+
+    if (bits & GLS_SHADOW_PASS) {
+        GLSF("void main() {}\n");
+        return;
+    }
 
     GLSF("void main() {\n");
     if (bits & GLS_CLASSIC_SKY) {
@@ -930,6 +950,8 @@ static GLuint create_and_use_program(glStateBits_t bits)
 
     if (bits & GLS_GLOWMAP_ENABLE)
         bind_texture_unit(program, "u_glowmap", TMU_GLOWMAP);
+
+    bind_texture_unit(program, "u_shadowmap", TMU_SHADOWMAP);
     
     return program;
 

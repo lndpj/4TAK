@@ -1179,7 +1179,7 @@ static bool GL_CheckFramebufferStatus(bool check, const char *name)
 
 bool GL_InitFramebuffers(void)
 {
-    int scene_w = 0, scene_h = 0, bloom_w = 0, bloom_h = 0;
+    int scene_w = 0, scene_h = 0, bloom_w = 0, bloom_h = 0, shadow_w = 0;
 
     if (gl_waterwarp->integer || gl_bloom->integer) {
         scene_w = glr.fd.width;
@@ -1189,6 +1189,10 @@ bool GL_InitFramebuffers(void)
     if (gl_bloom->integer) {
         bloom_w = glr.fd.width;
         bloom_h = glr.fd.height;
+    }
+
+    if (gl_shadows->integer >= 3) {
+        shadow_w = 2048;
     }
 
     GL_ClearErrors();
@@ -1226,6 +1230,19 @@ bool GL_InitFramebuffers(void)
     qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bloom_w ? TEXNUM_PP_BLUR_1 : GL_NONE, 0);
 
     CHECK_FB(bloom_w, "FBO_BLUR_1");
+
+    if (shadow_w) {
+        GL_ForceTexture(TMU_TEXTURE, TEXNUM_PP_SHADOWMAP);
+        qglTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, shadow_w, shadow_w, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+        qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+        qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+
+        qglBindFramebuffer(GL_FRAMEBUFFER, FBO_SHADOWMAP);
+        qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, TEXNUM_PP_SHADOWMAP, 0);
+        CHECK_FB(shadow_w, "FBO_SHADOWMAP");
+    }
 
     qglBindFramebuffer(GL_FRAMEBUFFER, 0);
 

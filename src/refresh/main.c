@@ -802,6 +802,56 @@ static pp_flags_t GL_BindFramebuffer(void)
     return flags;
 }
 
+static void GL_RenderShadowPass(void)
+{
+    if (gl_shadows->integer < 3 || !glr.framebuffer_ok)
+        return;
+
+    qglBindFramebuffer(GL_FRAMEBUFFER, FBO_SHADOWMAP);
+    qglViewport(0, 0, 2048, 2048);
+    qglClear(GL_DEPTH_BUFFER_BIT);
+    qglColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+    // Fixed overhead light direction for entities
+    vec3_t light_dir = { 0.3f, 0.3f, -1.0f };
+    VectorNormalize(light_dir);
+
+    // Ortho projection around the current view position
+    float size = 1024.0f;
+    GL_Ortho(-size, size, -size, size, -2048, 2048);
+
+    // Simple light view matrix looking at player
+    vec3_t axis[3], light_vieworg;
+    VectorCopy(light_dir, axis[2]);
+    MakeNormalVectors(axis[2], axis[0], axis[1]);
+    VectorCopy(glr.fd.vieworg, light_vieworg);
+    Matrix_FromOriginAxis(light_vieworg, axis, glr.viewmatrix);
+    GL_ForceMatrix(gl_identity, glr.viewmatrix);
+
+    // Calculate the Shadow Matrix: Bias * P * V
+    // This maps [-1, 1] clip space to [0, 1] texture space
+    static const mat4_t bias = {
+        0.5f, 0.0f, 0.0f, 0.0f,
+        0.0f, 0.5f, 0.0f, 0.0f,
+        0.0f, 0.0f, 0.5f, 0.0f,
+        0.5f, 0.5f, 0.5f, 1.0f
+    };
+    mat4_t light_pv;
+    GL_MultMatrix(light_pv, gls.u_block.m_proj, glr.viewmatrix);
+    GL_MultMatrix(gls.u_block.m_shadow, bias, light_pv);
+    gls.u_block_dirty = true;
+
+    glr.ppl_bits |= GLS_SHADOW_PASS;
+
+    GL_ClassifyEntities();
+    GL_DrawEntities(glr.ents.opaque);
+    GL_DrawEntities(glr.ents.bmodels);
+
+    glr.ppl_bits &= ~GLS_SHADOW_PASS;
+
+    qglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+}
+
 void R_RenderFrame(const refdef_t *fd)
 {
     GL_Flush2D();
@@ -838,6 +888,8 @@ void R_RenderFrame(const refdef_t *fd)
     }
 
     pp_flags_t pp_flags = GL_BindFramebuffer();
+
+    GL_RenderShadowPass();
 
     GL_Setup3D();
 
@@ -1122,9 +1174,9 @@ static void GL_Register(void)
     gl_coloredlightmaps->changed = gl_lightmap_changed;
     gl_lightmap_bits = Cvar_Get("gl_lightmap_bits", "0", 0);
     gl_lightmap_bits->changed = gl_lightmap_changed;
-    gl_lightmap_upscale = Cvar_Get("gl_lightmap_upscale", "2", CVAR_REFRESH);
+    gl_lightmap_upscale = Cvar_Get("gl_lightmap_upscale", "0", CVAR_REFRESH);
     gl_lightmap_upscale->generator = gl_lightmap_upscale_g;
-    gl_lightmap_blur = Cvar_Get("gl_lightmap_blur", "1", CVAR_REFRESH);
+    gl_lightmap_blur = Cvar_Get("gl_lightmap_blur", "0", CVAR_REFRESH);
     gl_lightmap_blur->generator = gl_lightmap_blur_g;
     gl_brightness = Cvar_Get("gl_brightness", "0", 0);
     gl_brightness->changed = gl_lightmap_changed;
